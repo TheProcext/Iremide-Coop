@@ -296,8 +296,39 @@ tr:hover td { background: var(--surface-2); }
   <button onclick="document.getElementById('fbBanner').style.display='none';navigate('settings')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Configure →</button>
 </div>
 
-<!-- Firebase setup screen removed — config is hardcoded -->
-
+<!-- First-run Firebase setup screen -->
+<div id="setupScreen" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:998;align-items:center;justify-content:center;flex-direction:column;padding:20px">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.4)">
+    <div style="background:var(--navy);padding:24px 28px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <div style="width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🤝</div>
+        <div>
+          <div style="color:#fff;font-size:16px;font-weight:600">Iremide Cooperative</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px">Firebase Database Setup</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:24px 28px">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:20px;background:var(--surface-2);border-radius:8px;padding:12px 14px;border:1px solid var(--border)">
+        Paste your Firebase config values below. Find them at<br>
+        <strong>console.firebase.google.com → your project → ⚙ Project Settings → Your apps → Web app → Config</strong>
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-group"><label>API Key *</label><input id="setup-apiKey" placeholder="AIzaSy..."></div>
+        <div class="form-group"><label>Auth Domain *</label><input id="setup-authDomain" placeholder="yourapp.firebaseapp.com"></div>
+        <div class="form-group"><label>Project ID *</label><input id="setup-projectId" placeholder="your-project-id"></div>
+        <div class="form-group"><label>Storage Bucket *</label><input id="setup-storageBucket" placeholder="yourapp.appspot.com"></div>
+        <div class="form-group"><label>Messaging Sender ID *</label><input id="setup-messagingSenderId" placeholder="123456789012"></div>
+        <div class="form-group"><label>App ID *</label><input id="setup-appId" placeholder="1:123:web:abc123"></div>
+      </div>
+      <div id="setupError" style="color:var(--red);font-size:12px;margin-bottom:10px;min-height:18px;line-height:1.5"></div>
+      <div style="display:flex;gap:10px">
+        <button id="setupBtn" onclick="submitSetup()" class="btn btn-primary" style="flex:1;justify-content:center;padding:10px">Connect Firebase</button>
+        <button onclick="hideSetupScreen();navigate('dashboard')" class="btn btn-outline" style="font-size:12px">Skip (use locally)</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="app">
 
@@ -359,7 +390,7 @@ tr:hover td { background: var(--surface-2); }
     </div>
     <div class="nav-item" onclick="navigate('email')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      Email Members
+      Email & SMS
     </div>
     <div class="nav-item" onclick="navigate('settings')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a2 2 0 0 0-2.83 0l-.71.71a2 2 0 0 1-2.83 0l-.7-.71a2 2 0 0 0-2.83 0l-.71.71a2 2 0 0 1-2.83 0"/></svg>
@@ -616,7 +647,6 @@ const FIREBASE_CONFIG = {
 // ─────────────────────────────────────────────────────
 
 function getFirebaseConfig() {
-  // Always return the hardcoded config above
   return FIREBASE_CONFIG;
 }
 
@@ -632,16 +662,16 @@ async function initFirebase() {
   setLoadProgress(10, 'Reading configuration…');
   const cfg = getFirebaseConfig();
   if (!cfg) {
-    setLoadProgress(100, 'Firebase config missing — check FIREBASE_CONFIG in the script');
+    setLoadProgress(100, 'Setup required');
     loadLocalFallback();
-    setTimeout(finishLoading, 600);
+    setTimeout(() => { finishLoading(); showSetupScreen(); }, 400);
     return;
   }
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 15000)
+    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 10000)
   );
   try {
-    setLoadProgress(20, 'Firebase SDK loaded…'); await new Promise(r=>setTimeout(r,100)); setLoadProgress(30, 'Connecting to Firebase…');
+    setLoadProgress(30, 'Connecting to Firebase…');
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
     try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {}
@@ -745,6 +775,7 @@ async function loadAllFromFirebase() {
     const s = sSnap.data();
     if (s.settings) Object.assign(data.settings, s.settings);
     if (s.emailjs) data.emailjs = s.emailjs;
+    if (s.termii) data.termii = s.termii;
     if (s.firebaseConfig) data.firebaseConfig = s.firebaseConfig;
   }
 }
@@ -811,6 +842,7 @@ async function fbSaveSettings() {
   await db.collection(COLL.settings).doc('config').set({
     settings: data.settings,
     emailjs: data.emailjs || {},
+    termii: data.termii || {},
     firebaseConfig: data.firebaseConfig || {},
     updatedAt: new Date().toISOString()
   }, { merge: true });
@@ -844,12 +876,12 @@ function load() { if (!db) loadLocalFallback(); }
 
 // ===== FIREBASE CONFIG UI =====
 async function saveFirebaseConfig() {
-  toast('Firebase config is hardcoded in the script — no action needed');
+  toast('Firebase config is hardcoded in the script');
 }
 
 async function testFirebaseConnection() {
   if (!db) {
-    toast('Not connected — ensure file is served over http:// not file://');
+    toast('Not connected — go to Settings → Firebase → Enter Firebase Config');
     return;
   }
   try {
@@ -1146,7 +1178,8 @@ function memberRows(filter='', cluster='') {
       <td>
         <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')">Edit</button>
         <button class="btn btn-outline btn-sm" onclick="viewLedger('${m.card}')" style="margin-left:4px">Ledger</button>
-        ${m.email ? `<button class="btn btn-outline btn-sm" onclick="emailMemberStatement('${m.card}')" style="margin-left:4px;color:var(--navy)" title="Send account statement">✉</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No email on file">✉</button>`}
+        ${m.email ? `<button class="btn btn-outline btn-sm" onclick="emailMemberStatement('${m.card}')" style="margin-left:4px;color:var(--navy)" title="Send account statement by email">✉</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No email on file">✉</button>`}
+        ${m.phone ? `<button class="btn btn-outline btn-sm" onclick="smsMemberStatement('${m.card}')" style="margin-left:4px;color:var(--green)" title="Send account statement by SMS">📱</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No phone on file">📱</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -1367,7 +1400,8 @@ function renderClusterMeeting() {
     <div class="flex gap-2 items-center">
       <input type="date" id="meetingDate" value="${today()}" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
       <button class="btn btn-gold btn-sm" onclick="saveMeetingContribs()">💾 Save All to Contributions</button>
-      <button class="btn btn-outline btn-sm" onclick="emailClusterReceipts()" title="Email contribution receipts to all members with email addresses">✉ Email Receipts</button>
+      <button class="btn btn-outline btn-sm" onclick="emailClusterReceipts()" title="Email receipts">✉ Email Receipts</button>
+      <button class="btn btn-outline btn-sm" onclick="smsClusterReceipts()" style="color:var(--green)" title="SMS receipts to members with phone numbers">📱 SMS Receipts</button>
     </div>
   </div>
   <div class="cluster-grid mb-5">
@@ -1521,7 +1555,8 @@ function renderLedger() {
       <div class="ledger-meta" style="margin-top:4px">${m.phone||''} ${m.email?'· '+m.email:''}</div>
     </div>
     <span class="badge ${m.status==='Active'?'badge-green':'badge-red'}" style="font-size:13px">${m.status}</span>
-    ${m.email ? `<button class="btn btn-gold btn-sm" onclick="emailMemberStatement('${m.card}')">✉ Send Statement</button>` : `<span class="text-sm text-muted">No email on file</span>`}
+    ${m.email ? `<button class="btn btn-gold btn-sm" onclick="emailMemberStatement('${m.card}')">✉ Email Statement</button>` : `<span class="text-sm text-muted">No email</span>`}
+    ${m.phone ? `<button class="btn btn-outline btn-sm" onclick="smsMemberStatement('${m.card}')" style="color:var(--green);border-color:var(--green)">📱 SMS Statement</button>` : ''}
   </div>
 
   <div class="fund-grid mb-4">
@@ -1591,12 +1626,11 @@ function renderSettings() {
           <button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>
           <button class="btn btn-outline" onclick="if(confirm('Disconnect Firebase and reset config?')){clearFirebaseConfig();toast('Config cleared — reload to reconnect');}" style="color:var(--red)">Disconnect</button>
         </div>` : `
-        <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:12px">
-          ⚠ Not connected. The config is hardcoded in the file — make sure you are serving this file over http:// (not file://) and that your Firestore database exists in test mode.
+        <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px">
+          Firebase is not connected. Click the button below to enter your config keys.
         </div>
         <div class="form-actions">
-          <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
-          <button class="btn btn-outline" onclick="location.reload()">Retry</button>
+          <button class="btn btn-primary" onclick="showSetupScreen()" style="background:#f97316;border-color:#f97316">Enter Firebase Config</button>
         </div>`}
       </div>
     </div>
@@ -1615,6 +1649,35 @@ function renderSettings() {
         <div class="form-actions">
           <button class="btn btn-primary" onclick="changePin()">Change PIN</button>
           <button class="btn btn-outline" onclick="lockApp()">🔒 Lock App Now</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Termii SMS Config -->
+    <div class="card mb-4" style="border-left:3px solid var(--green)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📱 SMS Setup (Termii)</div>
+          <div class="card-subtitle">Nigerian SMS gateway — sends to 080/081/090 numbers, pay in Naira</div>
+        </div>
+        <span class="badge ${(data.termii||{}).apiKey?'badge-green':'badge-amber'}">${(data.termii||{}).apiKey?'✓ Configured':'Not configured'}</span>
+      </div>
+      <div class="card-body">
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;font-size:12px;line-height:1.9;color:var(--text-2)">
+          <strong>Setup (free to start):</strong><br>
+          1. Go to <a href="https://termii.com" target="_blank" style="color:var(--navy)">termii.com</a> → Sign up free → verify your account<br>
+          2. In your dashboard, go to <strong>Settings → API Keys</strong> → copy your API Key<br>
+          3. Choose a sender name (max 11 characters, e.g. <em>IREMIDE</em>) — this shows as the sender on members' phones<br>
+          4. Paste below and click Save → test with any phone number
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>Termii API Key</label><input id="termii-key" placeholder="Your Termii API key" value="${(data.termii||{}).apiKey||''}"></div>
+          <div class="form-group"><label>Sender Name (max 11 chars)</label><input id="termii-sender" placeholder="IREMIDE" maxlength="11" value="${(data.termii||{}).senderName||'IREMIDE'}"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveTermiiSettings()" style="background:var(--green);border-color:var(--green)">Save SMS Settings</button>
+          <button class="btn btn-outline" onclick="testSMS()" ${(data.termii||{}).apiKey?'':'disabled style="opacity:0.5"'}>Send Test SMS</button>
         </div>
       </div>
     </div>
@@ -2065,106 +2128,100 @@ function exportData() {
   toast('CSV downloaded');
 }
 
-// ===== EMAIL PAGE =====
+// ===== EMAIL + SMS PAGE =====
 function renderEmail() {
   const ejs = data.emailjs || {};
-  const configured = !!(ejs.publicKey && ejs.serviceId && ejs.templateStatement);
+  const sms = data.termii || {};
+  const ejsOk = !!(ejs.publicKey && ejs.serviceId && ejs.templateStatement);
+  const smsOk = !!(sms.apiKey);
   const withEmail = data.members.filter(m => m.email);
-  const noEmail = data.members.filter(m => !m.email);
-
+  const withPhone = data.members.filter(m => m.phone);
+  const noContact = data.members.filter(m => !m.email && !m.phone);
   return `
-  ${!configured ? `<div style="background:var(--amber-light);border:1px solid #e8c96a;border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-weight:600;font-size:13px;color:var(--amber)">⚠ EmailJS not configured yet</div>
-      <div style="font-size:12px;color:var(--text-2);margin-top:3px">Go to Settings to paste your EmailJS keys. It takes 3 minutes and emails are then sent with one click.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:12px;display:flex;align-items:center;justify-content:space-between">
+      <span>✉ Email (EmailJS)</span>
+      <span class="badge ${ejsOk?'badge-green':'badge-amber'}">${ejsOk?'✓ Configured':'Not configured'}</span>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="navigate('settings')">Go to Settings →</button>
-  </div>` : `<div style="background:var(--green-light);border:1px solid #a0d9b8;border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;font-size:13px;color:var(--green)">
-    ✓ EmailJS configured — emails send directly from this app. ${withEmail.length} of ${data.members.length} members have email addresses on file.
-  </div>`}
-
+    <div style="padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:12px;display:flex;align-items:center;justify-content:space-between">
+      <span>📱 SMS (Termii)</span>
+      <span class="badge ${smsOk?'badge-green':'badge-amber'}">${smsOk?'✓ Configured':'Not configured'}</span>
+    </div>
+  </div>
+  ${(!ejsOk||!smsOk)?`<div style="background:var(--amber-light);border:1px solid #e8c96a;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:13px;color:var(--amber)">⚠ ${!ejsOk&&!smsOk?'Email & SMS not configured':!ejsOk?'Email not configured':'SMS not configured'} — go to Settings</span>
+    <button class="btn btn-outline btn-sm" onclick="navigate('settings')">Settings →</button>
+  </div>`:''}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-
-    <!-- Individual statement -->
     <div class="card">
-      <div class="card-header">
-        <div><div class="card-title">Account Statement</div><div class="card-subtitle">Send a member their current balances</div></div>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:var(--navy)"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      </div>
+      <div class="card-header"><div><div class="card-title">Account Statement</div><div class="card-subtitle">Send a member their balances</div></div></div>
       <div class="card-body">
-        <div class="form-group mb-3">
-          <label>Select Member</label>
-          <select id="email-member-card" onchange="previewStatement()" style="width:100%">
+        <div class="form-group mb-3"><label>Select Member</label>
+          <select id="msg-member-card" onchange="previewStatement()" style="width:100%">
             <option value="">— choose member —</option>
-            ${data.members.map(m=>`<option value="${m.card}" ${m.email?'':'style="color:var(--text-3)"'}>${m.card} – ${m.name}${m.email?'':' (no email)'}</option>`).join('')}
+            ${data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}${m.email?' ✉':''}${m.phone?' 📱':''}</option>`).join('')}
           </select>
         </div>
-        <div id="statement-preview" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text-2);min-height:80px;margin-bottom:12px">
-          Select a member to preview their statement
+        <div id="statement-preview" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text-2);min-height:70px;margin-bottom:12px">Select a member to preview</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-primary" onclick="sendStatementEmail()" ${ejsOk?'':'disabled style="opacity:0.4"'}>✉ Email</button>
+          <button class="btn btn-outline" onclick="smsMemberStatement()" style="${smsOk?'color:var(--green);border-color:var(--green)':'opacity:0.4'}" ${smsOk?'':'disabled'}>📱 SMS</button>
         </div>
-        <button class="btn btn-primary w-full" onclick="sendStatementEmail()" ${configured?'':'disabled style="opacity:0.5"'}>
-          ✉ Send Account Statement
-        </button>
       </div>
     </div>
-
-    <!-- Broadcast -->
     <div class="card">
-      <div class="card-header">
-        <div><div class="card-title">Broadcast Message</div><div class="card-subtitle">Send an announcement to a cluster or all members</div></div>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:var(--navy)"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-      </div>
+      <div class="card-header"><div><div class="card-title">Broadcast Message</div><div class="card-subtitle">Send to a cluster or all members</div></div></div>
       <div class="card-body">
-        <div class="form-group mb-3">
-          <label>Send To</label>
+        <div class="form-group mb-3"><label>Send To</label>
           <select id="broadcast-target" style="width:100%">
-            <option value="all">All Members (${withEmail.length} with email)</option>
+            <option value="all">All Members (${withEmail.length}✉ · ${withPhone.length}📱)</option>
             ${CLUSTERS.map(cl=>{
-              const count = data.members.filter(m=>m.cluster===cl&&m.email).length;
-              return `<option value="${cl}">${cl} (${count} with email)</option>`;
+              const ec=data.members.filter(m=>m.cluster===cl&&m.email).length;
+              const sc=data.members.filter(m=>m.cluster===cl&&m.phone).length;
+              return `<option value="${cl}">${cl} (${ec}✉ · ${sc}📱)</option>`;
             }).join('')}
           </select>
         </div>
-        <div class="form-group mb-3"><label>Subject</label><input id="broadcast-subject" placeholder="Meeting reminder, Important notice..." style="width:100%"></div>
-        <div class="form-group mb-3"><label>Message</label><textarea id="broadcast-body" placeholder="Dear member, ..." style="width:100%;min-height:90px"></textarea></div>
-        <button class="btn btn-primary w-full" onclick="sendBroadcast()" ${configured?'':'disabled style="opacity:0.5"'}>
-          ✉ Send Broadcast
-        </button>
+        <div class="form-group mb-3"><label>Subject (email only)</label><input id="broadcast-subject" placeholder="Meeting reminder..." style="width:100%"></div>
+        <div class="form-group mb-3"><label>Message</label><textarea id="broadcast-body" placeholder="Dear member, ..." style="width:100%;min-height:80px"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-primary" onclick="sendBroadcast()" ${ejsOk?'':'disabled style="opacity:0.4"'}>✉ Email All</button>
+          <button class="btn btn-outline" onclick="smsBroadcast()" style="${smsOk?'color:var(--green);border-color:var(--green)':'opacity:0.4'}" ${smsOk?'':'disabled'}>📱 SMS All</button>
+        </div>
       </div>
     </div>
   </div>
-
-  <!-- Members without email -->
-  ${noEmail.length ? `<div class="card">
-    <div class="card-header">
-      <div><div class="card-title">Members without email addresses (${noEmail.length})</div>
-      <div class="card-subtitle">Add email addresses in the Members page to reach these members</div></div>
+  <div class="card mb-4">
+    <div class="card-header"><div class="card-title">Member Contact Coverage</div></div>
+    <div class="card-body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center">
+      <div><div style="font-size:24px;font-weight:700;color:var(--navy)">${withEmail.length}</div><div style="font-size:12px;color:var(--text-3)">Have email ✉</div></div>
+      <div><div style="font-size:24px;font-weight:700;color:var(--green)">${withPhone.length}</div><div style="font-size:12px;color:var(--text-3)">Have phone 📱</div></div>
+      <div><div style="font-size:24px;font-weight:700;color:var(--red)">${noContact.length}</div><div style="font-size:12px;color:var(--text-3)">No contact ⚠</div></div>
     </div>
+  </div>
+  ${noContact.length?`<div class="card mb-4">
+    <div class="card-header"><div><div class="card-title">No contact info (${noContact.length})</div><div class="card-subtitle">Add email or phone so they can be reached</div></div></div>
     <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px">
-      ${noEmail.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+      ${noContact.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
         <div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(m.name)}</div>
-        <div><div style="font-weight:500">${m.name}</div><div style="color:var(--text-3)">${m.card} · ${m.cluster}</div></div>
-        <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')" style="font-size:11px;padding:3px 8px">+ Email</button>
+        <div><div style="font-weight:500">${m.name}</div><div style="color:var(--text-3)">${m.card}</div></div>
+        <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')" style="font-size:11px;padding:3px 8px">+ Add</button>
       </div>`).join('')}
     </div>
-  </div>` : ''}
-
-  <!-- Email log -->
-  ${data.emailLog && data.emailLog.length ? `<div class="card" style="margin-top:16px">
-    <div class="card-header"><div class="card-title">Email Log (last ${Math.min(data.emailLog.length,20)})</div></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Sent</th><th>Type</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
-        <tbody>${[...data.emailLog].reverse().slice(0,20).map(l=>`<tr>
-          <td class="text-sm">${l.time}</td>
-          <td><span class="badge badge-navy" style="font-size:10px">${l.type}</span></td>
-          <td class="text-sm">${l.to}</td>
-          <td class="text-sm">${l.subject}</td>
-          <td><span class="badge ${l.ok?'badge-green':'badge-red'}">${l.ok?'Sent':'Failed'}</span></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>
-  </div>` : ''}`;
+  </div>`:''}
+  ${((data.emailLog||[]).length+(data.smsLog||[]).length)?`<div class="card">
+    <div class="card-header"><div class="card-title">Message Log (last 20)</div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Time</th><th>Channel</th><th>Type</th><th>To</th><th>Status</th></tr></thead>
+      <tbody>${[...(data.emailLog||[]).map(l=>({...l,ch:'Email'})),...(data.smsLog||[]).map(l=>({...l,ch:'SMS'}))]
+        .sort((a,b)=>b.time.localeCompare(a.time)).slice(0,20).map(l=>`<tr>
+        <td class="text-sm">${l.time}</td>
+        <td><span class="badge ${l.ch==='SMS'?'badge-green':'badge-navy'}" style="font-size:10px">${l.ch}</span></td>
+        <td class="text-sm">${l.type}</td><td class="text-sm">${l.to}</td>
+        <td><span class="badge ${l.ok?'badge-green':'badge-red'}">${l.ok?'Sent':'Failed'}</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`:''}`;
 }
 
 // ===== EMAILJS FUNCTIONS =====
@@ -2218,7 +2275,7 @@ ${sender}`;
 }
 
 function previewStatement() {
-  const card = document.getElementById('email-member-card')?.value;
+  const card = document.getElementById('msg-member-card')?.value || document.getElementById('email-member-card')?.value;
   const preview = document.getElementById('statement-preview');
   if (!preview) return;
   if (!card) { preview.textContent = 'Select a member to preview their statement'; return; }
@@ -2237,7 +2294,7 @@ function previewStatement() {
 
 async function sendStatementEmail(card) {
   if (!ejsReady()) return;
-  const resolvedCard = card || document.getElementById('email-member-card')?.value;
+  const resolvedCard = card || document.getElementById('msg-member-card')?.value || document.getElementById('email-member-card')?.value;
   if (!resolvedCard) { toast('Please select a member'); return; }
   const m = memberByCard(resolvedCard);
   if (!m) return;
@@ -2341,9 +2398,151 @@ function emailMemberStatement(card) {
   window._ledgerCard = card;
   navigate('email');
   setTimeout(() => {
-    const sel = document.getElementById('email-member-card');
+    const sel = document.getElementById('msg-member-card') || document.getElementById('email-member-card');
     if (sel) { sel.value = card; previewStatement(); }
   }, 100);
+}
+
+
+// ===== TERMII SMS FUNCTIONS =====
+function smsReady() {
+  const t = data.termii || {};
+  if (!t.apiKey) { toast('⚠ Termii SMS not configured — go to Settings to add your API key'); return false; }
+  return true;
+}
+
+function formatPhone(phone) {
+  // Normalise Nigerian numbers to international format for Termii
+  if (!phone) return '';
+  let p = phone.replace(/\D/g,'');
+  if (p.startsWith('0') && p.length === 11) p = '234' + p.slice(1);
+  if (p.startsWith('+')) p = p.slice(1);
+  return p;
+}
+
+function buildSmsStatement(card) {
+  const m = memberByCard(card);
+  if (!m) return '';
+  const f = calcMemberFunds(card);
+  const sender = (data.termii||{}).senderName || 'IREMIDE';
+  return `${sender} - ${m.name} Account:\nShares: N${fmtN(f.shares)}\nSavings: N${fmtN(f.savings)}\nBuilding: N${fmtN(f.building)}\nLoan Bal: N${fmtN(f.loan)}\nTotal Paid: N${fmtN(f.totalPaid)}. Queries: contact cooperative secretary.`;
+}
+
+async function sendSMS(phone, message) {
+  const t = data.termii || {};
+  const to = formatPhone(phone);
+  if (!to) throw new Error('Invalid phone number');
+  const body = {
+    to,
+    from: t.senderName || 'IREMIDE',
+    sms: message,
+    type: 'plain',
+    channel: 'generic',
+    api_key: t.apiKey
+  };
+  const res = await fetch('https://api.ng.termii.com/api/sms/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if (!res.ok || json.code === 'err') throw new Error(json.message || 'SMS send failed');
+  return json;
+}
+
+async function smsMemberStatement(card) {
+  if (!smsReady()) return;
+  const resolvedCard = card || document.getElementById('msg-member-card')?.value;
+  if (!resolvedCard) { toast('Please select a member'); return; }
+  const m = memberByCard(resolvedCard);
+  if (!m) return;
+  if (!m.phone) { toast(`${m.name} has no phone number on file`); return; }
+  toast(`Sending SMS to ${m.name}...`);
+  try {
+    await sendSMS(m.phone, buildSmsStatement(resolvedCard));
+    logSMS('Statement', m.phone, true);
+    toast(`✓ SMS sent to ${m.name} (${m.phone})`);
+  } catch(e) {
+    logSMS('Statement', m.phone, false);
+    toast(`✗ SMS failed: ${e.message}`);
+  }
+}
+
+async function smsBroadcast() {
+  if (!smsReady()) return;
+  const target = document.getElementById('broadcast-target')?.value;
+  const body = document.getElementById('broadcast-body')?.value?.trim();
+  if (!body) { toast('Please enter a message'); return; }
+  let recipients = data.members.filter(m => m.phone);
+  if (target && target !== 'all') recipients = recipients.filter(m => m.cluster === target);
+  if (!recipients.length) { toast('No members with phone numbers in this selection'); return; }
+  toast(`Sending SMS to ${recipients.length} members...`);
+  let sent = 0, failed = 0;
+  for (const m of recipients) {
+    try {
+      await sendSMS(m.phone, body);
+      logSMS('Broadcast', m.phone, true);
+      sent++;
+    } catch(e) {
+      logSMS('Broadcast', m.phone, false);
+      failed++;
+    }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  save();
+  toast(`✓ SMS sent to ${sent}${failed?`, ${failed} failed`:''}`);
+  render('email');
+}
+
+async function smsClusterReceipts() {
+  if (!smsReady()) return;
+  const cl = window._meetingCluster || CLUSTERS[0];
+  const date = document.getElementById('meetingDate')?.value || today();
+  const members = data.members.filter(m => m.cluster === cl && m.phone);
+  if (!members.length) { toast('No members in this cluster have phone numbers'); return; }
+  toast(`Sending SMS receipts to ${members.length} members...`);
+  let sent = 0;
+  for (const m of members) {
+    try {
+      await sendSMS(m.phone, buildSmsStatement(m.card));
+      logSMS('Receipt', m.phone, true);
+      sent++;
+    } catch(e) { logSMS('Receipt', m.phone, false); }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  save();
+  toast(`✓ SMS receipts sent to ${sent} members`);
+}
+
+function logSMS(type, to, ok) {
+  if (!data.smsLog) data.smsLog = [];
+  data.smsLog.push({ time: new Date().toLocaleString('en-GB'), type, to, ok });
+  if (data.smsLog.length > 100) data.smsLog = data.smsLog.slice(-100);
+}
+
+async function saveTermiiSettings() {
+  if (!data.termii) data.termii = {};
+  data.termii = {
+    apiKey: document.getElementById('termii-key')?.value?.trim(),
+    senderName: document.getElementById('termii-sender')?.value?.trim() || 'IREMIDE'
+  };
+  await fbSaveSettings();
+  save();
+  toast('SMS settings saved');
+  render('settings');
+}
+
+async function testSMS() {
+  if (!smsReady()) return;
+  const phone = prompt('Enter a phone number to send a test SMS to (e.g. 08012345678):');
+  if (!phone) return;
+  toast('Sending test SMS...');
+  try {
+    await sendSMS(phone, 'Test SMS from Iremide Cooperative Management System. SMS is working correctly!');
+    toast('✓ Test SMS sent! Check the phone.');
+  } catch(e) {
+    toast('✗ Test failed: ' + e.message);
+  }
 }
 
 async function saveEmailSettings() {
