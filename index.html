@@ -602,15 +602,16 @@ let _fbConnected = false;
 window._fbConnected = false;
 let _unsubscribers = [];
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyA_G4eV58ZtgRjrLpE69K0vq2HbLZUOopQ",
-  authDomain: "iremide-coop.firebaseapp.com",
-  databaseURL: "https://iremide-coop-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "iremide-coop",
-  storageBucket: "iremide-coop.firebasestorage.app",
+// ===== FIREBASE CONFIG — stored in localStorage, entered via setup screen =====
+// ── FIREBASE CONFIG (hardcoded) ──────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyA_G4eV58ZtgRjrLpE69K0vq2HbLZUOopQ",
+  authDomain:        "iremide-coop.firebaseapp.com",
+  databaseURL:       "https://iremide-coop-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "iremide-coop",
+  storageBucket:     "iremide-coop.firebasestorage.app",
   messagingSenderId: "118236670247",
-  appId: "1:118236670247:web:a1654a55d351c09786e102"
+  appId:             "1:118236670247:web:a1654a55d351c09786e102"
 };
 // ─────────────────────────────────────────────────────
 
@@ -637,10 +638,10 @@ async function initFirebase() {
     return;
   }
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 10000)
+    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 15000)
   );
   try {
-    setLoadProgress(30, 'Connecting to Firebase…');
+    setLoadProgress(20, 'Firebase SDK loaded…'); await new Promise(r=>setTimeout(r,100)); setLoadProgress(30, 'Connecting to Firebase…');
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
     try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {}
