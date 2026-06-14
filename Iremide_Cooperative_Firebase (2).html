@@ -296,6 +296,40 @@ tr:hover td { background: var(--surface-2); }
   <button onclick="document.getElementById('fbBanner').style.display='none';navigate('settings')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Configure →</button>
 </div>
 
+<!-- First-run Firebase setup screen -->
+<div id="setupScreen" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:998;align-items:center;justify-content:center;flex-direction:column;padding:20px">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.4)">
+    <div style="background:var(--navy);padding:24px 28px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <div style="width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🤝</div>
+        <div>
+          <div style="color:#fff;font-size:16px;font-weight:600">Iremide Cooperative</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px">Firebase Database Setup</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:24px 28px">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:20px;background:var(--surface-2);border-radius:8px;padding:12px 14px;border:1px solid var(--border)">
+        Paste your Firebase config values below. Find them at<br>
+        <strong>console.firebase.google.com → your project → ⚙ Project Settings → Your apps → Web app → Config</strong>
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-group"><label>API Key *</label><input id="setup-apiKey" placeholder="AIzaSy..."></div>
+        <div class="form-group"><label>Auth Domain *</label><input id="setup-authDomain" placeholder="yourapp.firebaseapp.com"></div>
+        <div class="form-group"><label>Project ID *</label><input id="setup-projectId" placeholder="your-project-id"></div>
+        <div class="form-group"><label>Storage Bucket *</label><input id="setup-storageBucket" placeholder="yourapp.appspot.com"></div>
+        <div class="form-group"><label>Messaging Sender ID *</label><input id="setup-messagingSenderId" placeholder="123456789012"></div>
+        <div class="form-group"><label>App ID *</label><input id="setup-appId" placeholder="1:123:web:abc123"></div>
+      </div>
+      <div id="setupError" style="color:var(--red);font-size:12px;margin-bottom:10px;min-height:18px;line-height:1.5"></div>
+      <div style="display:flex;gap:10px">
+        <button id="setupBtn" onclick="submitSetup()" class="btn btn-primary" style="flex:1;justify-content:center;padding:10px">Connect Firebase</button>
+        <button onclick="hideSetupScreen();navigate('dashboard')" class="btn btn-outline" style="font-size:12px">Skip (use locally)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- Sidebar -->
@@ -599,65 +633,99 @@ let _fbConnected = false;
 window._fbConnected = false;
 let _unsubscribers = [];
 
-// ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────────
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyA_G4eV58ZtgRjrLpE69K0vq2HbLZUOopQ",
-  authDomain:        "iremide-coop.firebaseapp.com",
-  projectId:         "iremide-coop",
-  storageBucket:     "iremide-coop.firebasestorage.app",
-  messagingSenderId: "118236670247",
-  appId:             "1:118236670247:web:a1654a55d351c09786e102"
-};
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ===== FIREBASE CONFIG — stored in localStorage, entered via setup screen =====
 function getFirebaseConfig() {
-  // Always use the hardcoded config above — Settings UI is for display only
-  return (FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.projectId !== 'PASTE_YOUR_projectId_HERE')
-    ? FIREBASE_CONFIG : null;
+  try {
+    const c = JSON.parse(localStorage.getItem('iremide_fb') || 'null');
+    return (c && c.projectId) ? c : null;
+  } catch(e) { return null; }
 }
 
 function saveFirebaseConfigLocal(cfg) {
-  // no-op — config is now hardcoded above
+  localStorage.setItem('iremide_fb', JSON.stringify(cfg));
+}
+
+function clearFirebaseConfig() {
+  localStorage.removeItem('iremide_fb');
 }
 
 async function initFirebase() {
   setLoadProgress(10, 'Reading configuration…');
   const cfg = getFirebaseConfig();
-  if (!cfg || !cfg.projectId) {
-    setLoadProgress(100, 'No Firebase config — using local storage');
+  if (!cfg) {
+    setLoadProgress(100, 'Setup required');
     loadLocalFallback();
-    setTimeout(finishLoading, 400);
-    showFbBanner();
+    setTimeout(() => { finishLoading(); showSetupScreen(); }, 400);
     return;
   }
-  // Timeout after 8 seconds — fall back to local storage
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Connection timed out after 8 seconds')), 8000)
+    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 10000)
   );
   try {
     setLoadProgress(30, 'Connecting to Firebase…');
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
-    // Enable offline persistence so it works even with poor connectivity
-    try {
-      await db.enablePersistence({ synchronizeTabs: true });
-    } catch(e) {
-      if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn('Persistence:', e);
-    }
+    try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {}
     setLoadProgress(60, 'Loading data…');
     await Promise.race([loadAllFromFirebase(), timeout]);
     setLoadProgress(100, 'Connected ✓');
     _fbConnected = true;
     window._fbConnected = true;
     subscribeToChanges();
-    setTimeout(finishLoading, 400);
+    setTimeout(finishLoading, 300);
   } catch(err) {
     console.error('Firebase error:', err.message);
-    setLoadProgress(100, 'Using local storage (Firebase: ' + err.message + ')');
+    setLoadProgress(100, 'Could not connect — ' + err.message);
     db = null;
     loadLocalFallback();
-    showFbBanner();
-    setTimeout(finishLoading, 1500);
+    setTimeout(() => { finishLoading(); showFbBanner(); }, 1500);
+  }
+}
+
+// ===== SETUP SCREEN — shown on first run or when config is missing =====
+function showSetupScreen() {
+  document.getElementById('setupScreen').style.display = 'flex';
+}
+
+function hideSetupScreen() {
+  document.getElementById('setupScreen').style.display = 'none';
+}
+
+async function submitSetup() {
+  const fields = ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'];
+  const cfg = {};
+  let missing = [];
+  fields.forEach(f => {
+    const v = document.getElementById('setup-' + f)?.value?.trim();
+    cfg[f] = v || '';
+    if (!v) missing.push(f);
+  });
+  if (missing.length) {
+    document.getElementById('setupError').textContent = 'Please fill in all fields: ' + missing.join(', ');
+    return;
+  }
+  document.getElementById('setupError').textContent = '';
+  document.getElementById('setupBtn').textContent = 'Connecting…';
+  document.getElementById('setupBtn').disabled = true;
+  saveFirebaseConfigLocal(cfg);
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    else firebase.app();
+    db = firebase.firestore();
+    try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {}
+    await loadAllFromFirebase();
+    _fbConnected = true;
+    window._fbConnected = true;
+    subscribeToChanges();
+    hideSetupScreen();
+    navigate('dashboard');
+    toast('✓ Firebase connected — data is now syncing to the cloud');
+  } catch(err) {
+    document.getElementById('setupError').textContent = 'Connection failed: ' + err.message + '. Check your keys and try again.';
+    document.getElementById('setupBtn').textContent = 'Connect Firebase';
+    document.getElementById('setupBtn').disabled = false;
+    clearFirebaseConfig();
+    db = null;
   }
 }
 
@@ -797,17 +865,20 @@ function load() { if (!db) loadLocalFallback(); }
 
 // ===== FIREBASE CONFIG UI =====
 async function saveFirebaseConfig() {
-  toast('✓ Firebase config is hardcoded in the file — no action needed. The app connects automatically.');
+  showSetupScreen();
 }
 
 async function testFirebaseConnection() {
-  if (!db) { toast('Not connected — check the FIREBASE_CONFIG block at the top of the script and ensure your Firestore rules allow read/write'); return; }
+  if (!db) {
+    toast('Not connected — go to Settings → Firebase → Enter Firebase Config');
+    return;
+  }
   try {
     await db.collection('_test').doc('ping').set({ t: Date.now() });
     await db.collection('_test').doc('ping').delete();
     toast('✓ Firebase connection is working perfectly');
   } catch(e) {
-    toast('✗ Connection test failed: ' + (e.message||'Check Firestore rules allow read/write in test mode'));
+    toast('✗ Test failed: ' + (e.message || 'Check Firestore rules are set to test mode'));
   }
 }
 
@@ -1528,20 +1599,25 @@ function renderSettings() {
     <div class="card mb-4" style="border-left:3px solid #f97316">
       <div class="card-header">
         <div><div class="card-title">🔥 Firebase Database</div>
-        <div class="card-subtitle">Config is hardcoded in the file — connects automatically on every open</div></div>
-        <span class="badge" id="fbStatusBadge" style="background:${_fbConnected?'var(--green-light)':'var(--amber-light)'};color:${_fbConnected?'var(--green)':'var(--amber)'}">${_fbConnected?'✓ Connected':'Connecting…'}</span>
+        <div class="card-subtitle">${_fbConnected ? 'Connected — syncing to cloud in real time' : 'Not connected — data saving locally only'}</div></div>
+        <span class="badge" style="background:${_fbConnected?'var(--green-light)':'var(--red-light)'};color:${_fbConnected?'var(--green)':'var(--red)'}">${_fbConnected?'✓ Connected':'✗ Not connected'}</span>
       </div>
       <div class="card-body">
-        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.9;color:var(--text-2);margin-bottom:12px">
-          <strong>Project:</strong> ${FIREBASE_CONFIG.projectId}<br>
-          <strong>Auth Domain:</strong> ${FIREBASE_CONFIG.authDomain}<br>
-          <strong>App ID:</strong> ${FIREBASE_CONFIG.appId}
+        ${_fbConnected ? `
+        <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:12px">
+          ✓ All data is syncing to Firebase. Any device that opens this app will see the same data.
         </div>
         <div class="form-actions">
           <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
-          ${_fbConnected ? '<button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>' : ''}
+          <button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>
+          <button class="btn btn-outline" onclick="if(confirm('Disconnect Firebase and reset config?')){clearFirebaseConfig();toast('Config cleared — reload to reconnect');}" style="color:var(--red)">Disconnect</button>
+        </div>` : `
+        <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px">
+          Firebase is not connected. Click the button below to enter your config keys.
         </div>
-        ${_fbConnected ? `<div style="margin-top:10px;padding:10px;background:var(--green-light);border-radius:var(--radius-sm);font-size:12px;color:var(--green)">✓ Connected to Firebase — all data syncs to the cloud in real time across all devices</div>` : `<div style="margin-top:10px;padding:10px;background:var(--amber-light);border-radius:var(--radius-sm);font-size:12px;color:var(--amber)">⚠ Not yet connected. Make sure your Firestore database is created in test mode at console.firebase.google.com</div>`}
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="showSetupScreen()" style="background:#f97316;border-color:#f97316">Enter Firebase Config</button>
+        </div>`}
       </div>
     </div>
 
