@@ -296,39 +296,8 @@ tr:hover td { background: var(--surface-2); }
   <button onclick="document.getElementById('fbBanner').style.display='none';navigate('settings')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Configure →</button>
 </div>
 
-<!-- First-run Firebase setup screen -->
-<div id="setupScreen" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:998;align-items:center;justify-content:center;flex-direction:column;padding:20px">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.4)">
-    <div style="background:var(--navy);padding:24px 28px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-        <div style="width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🤝</div>
-        <div>
-          <div style="color:#fff;font-size:16px;font-weight:600">Iremide Cooperative</div>
-          <div style="color:rgba(255,255,255,0.5);font-size:12px">Firebase Database Setup</div>
-        </div>
-      </div>
-    </div>
-    <div style="padding:24px 28px">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:20px;background:var(--surface-2);border-radius:8px;padding:12px 14px;border:1px solid var(--border)">
-        Paste your Firebase config values below. Find them at<br>
-        <strong>console.firebase.google.com → your project → ⚙ Project Settings → Your apps → Web app → Config</strong>
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div class="form-group"><label>API Key *</label><input id="setup-apiKey" placeholder="AIzaSy..."></div>
-        <div class="form-group"><label>Auth Domain *</label><input id="setup-authDomain" placeholder="yourapp.firebaseapp.com"></div>
-        <div class="form-group"><label>Project ID *</label><input id="setup-projectId" placeholder="your-project-id"></div>
-        <div class="form-group"><label>Storage Bucket *</label><input id="setup-storageBucket" placeholder="yourapp.appspot.com"></div>
-        <div class="form-group"><label>Messaging Sender ID *</label><input id="setup-messagingSenderId" placeholder="123456789012"></div>
-        <div class="form-group"><label>App ID *</label><input id="setup-appId" placeholder="1:123:web:abc123"></div>
-      </div>
-      <div id="setupError" style="color:var(--red);font-size:12px;margin-bottom:10px;min-height:18px;line-height:1.5"></div>
-      <div style="display:flex;gap:10px">
-        <button id="setupBtn" onclick="submitSetup()" class="btn btn-primary" style="flex:1;justify-content:center;padding:10px">Connect Firebase</button>
-        <button onclick="hideSetupScreen();navigate('dashboard')" class="btn btn-outline" style="font-size:12px">Skip (use locally)</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Firebase setup screen removed — config is hardcoded -->
+
 
 <div class="app">
 
@@ -634,11 +603,20 @@ window._fbConnected = false;
 let _unsubscribers = [];
 
 // ===== FIREBASE CONFIG — stored in localStorage, entered via setup screen =====
+// ── FIREBASE CONFIG (hardcoded) ──────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyA_G4eV58ZtgRjrLpE69K0vq2HbLZUOopQ",
+  authDomain:        "iremide-coop.firebaseapp.com",
+  projectId:         "iremide-coop",
+  storageBucket:     "iremide-coop.firebasestorage.app",
+  messagingSenderId: "118236670247",
+  appId:             "1:118236670247:web:a1654a55d351c09786e102"
+};
+// ─────────────────────────────────────────────────────
+
 function getFirebaseConfig() {
-  try {
-    const c = JSON.parse(localStorage.getItem('iremide_fb') || 'null');
-    return (c && c.projectId) ? c : null;
-  } catch(e) { return null; }
+  // Always return the hardcoded config above
+  return FIREBASE_CONFIG;
 }
 
 function saveFirebaseConfigLocal(cfg) {
@@ -653,9 +631,9 @@ async function initFirebase() {
   setLoadProgress(10, 'Reading configuration…');
   const cfg = getFirebaseConfig();
   if (!cfg) {
-    setLoadProgress(100, 'Setup required');
+    setLoadProgress(100, 'Firebase config missing — check FIREBASE_CONFIG in the script');
     loadLocalFallback();
-    setTimeout(() => { finishLoading(); showSetupScreen(); }, 400);
+    setTimeout(finishLoading, 600);
     return;
   }
   const timeout = new Promise((_, reject) =>
@@ -865,12 +843,12 @@ function load() { if (!db) loadLocalFallback(); }
 
 // ===== FIREBASE CONFIG UI =====
 async function saveFirebaseConfig() {
-  showSetupScreen();
+  toast('Firebase config is hardcoded in the script — no action needed');
 }
 
 async function testFirebaseConnection() {
   if (!db) {
-    toast('Not connected — go to Settings → Firebase → Enter Firebase Config');
+    toast('Not connected — ensure file is served over http:// not file://');
     return;
   }
   try {
@@ -1612,11 +1590,12 @@ function renderSettings() {
           <button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>
           <button class="btn btn-outline" onclick="if(confirm('Disconnect Firebase and reset config?')){clearFirebaseConfig();toast('Config cleared — reload to reconnect');}" style="color:var(--red)">Disconnect</button>
         </div>` : `
-        <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px">
-          Firebase is not connected. Click the button below to enter your config keys.
+        <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:12px">
+          ⚠ Not connected. The config is hardcoded in the file — make sure you are serving this file over http:// (not file://) and that your Firestore database exists in test mode.
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="showSetupScreen()" style="background:#f97316;border-color:#f97316">Enter Firebase Config</button>
+          <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
+          <button class="btn btn-outline" onclick="location.reload()">Retry</button>
         </div>`}
       </div>
     </div>
