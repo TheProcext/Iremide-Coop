@@ -1,0 +1,2566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iremide Cooperative Multipurpose Union</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0d2137;
+  --navy-mid: #1a3a5c;
+  --navy-light: #234f7a;
+  --gold: #c8992a;
+  --gold-light: #e8b84b;
+  --gold-pale: #fdf3dc;
+  --green: #1a6b3c;
+  --green-light: #e8f5ee;
+  --red: #b91c1c;
+  --red-light: #fee2e2;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-3: #eef0f4;
+  --border: #e2e5ea;
+  --border-strong: #c8cdd6;
+  --text: #0d1b2a;
+  --text-2: #3d4f63;
+  --text-3: #6b7d91;
+  --text-inv: #ffffff;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--surface-2); color: var(--text); min-height: 100vh; }
+code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Layout */
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 240px; background: var(--navy); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Sidebar */
+.sidebar-brand { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.brand-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.brand-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.brand-name { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.brand-sub { color: rgba(255,255,255,0.45); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 6px; padding: 0 0; }
+
+.nav-section { padding: 12px 0 4px; }
+.nav-label { color: rgba(255,255,255,0.35); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 0 16px 6px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; color: rgba(255,255,255,0.65); font-size: 13px; font-weight: 400; transition: all 0.15s; border-left: 2px solid transparent; user-select: none; }
+.nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.nav-item.active { background: rgba(200,153,42,0.15); color: var(--gold-light); border-left-color: var(--gold); font-weight: 500; }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.8; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-footer { margin-top: auto; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-footer p { color: rgba(255,255,255,0.3); font-size: 10px; line-height: 1.5; }
+
+/* Topbar */
+.page-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.page-subtitle { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.btn-primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+.btn-primary:hover { background: var(--navy-mid); }
+.btn-gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+.btn-gold:hover { background: var(--gold-light); }
+.btn-outline { background: transparent; color: var(--text); border-color: var(--border-strong); }
+.btn-outline:hover { background: var(--surface-3); }
+.btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn svg { width: 14px; height: 14px; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.card-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.card-subtitle { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.card-body { padding: 16px 20px; }
+
+/* Metric cards */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.metric-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.metric-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+.metric-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.metric-card.navy { background: var(--navy); border-color: var(--navy); }
+.metric-card.navy .metric-label { color: rgba(255,255,255,0.5); }
+.metric-card.navy .metric-value { color: #fff; }
+.metric-card.navy .metric-sub { color: rgba(255,255,255,0.4); }
+.metric-card.gold { background: var(--gold-pale); border-color: #e8c96a; }
+.metric-card.gold .metric-value { color: var(--gold); }
+.metric-card.green { background: var(--green-light); border-color: #a0d9b8; }
+.metric-card.green .metric-value { color: var(--green); }
+.metric-card.red { background: var(--red-light); border-color: #fca5a5; }
+.metric-card.red .metric-value { color: var(--red); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--surface-2); color: var(--text-3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface-2); }
+.td-num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.td-name { font-weight: 500; color: var(--text); }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-amber { background: var(--amber-light); color: var(--amber); }
+.badge-navy { background: rgba(13,33,55,0.08); color: var(--navy); }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-size: 13px; font-family: 'Inter', sans-serif; background: var(--surface); color: var(--text);
+  outline: none; transition: border-color 0.15s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(13,33,55,0.08); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-actions { display: flex; gap: 8px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; background: var(--surface-3); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 20px; }
+.tab { padding: 7px 16px; border-radius: 5px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-3); transition: all 0.15s; white-space: nowrap; }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.tab:hover:not(.active) { color: var(--text-2); }
+
+/* Section headers */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.section-desc { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+/* Search bar */
+.search-bar { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 12px; }
+.search-bar input { background: none; border: none; outline: none; font-size: 13px; color: var(--text); flex: 1; font-family: 'Inter', sans-serif; }
+.search-bar input::placeholder { color: var(--text-3); }
+.search-bar svg { width: 15px; height: 15px; color: var(--text-3); flex-shrink: 0; }
+
+/* Split info block */
+.split-info { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.split-chip { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; }
+.split-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* P&L row */
+.pl-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.pl-row:last-child { border-bottom: none; }
+.pl-row.total { font-weight: 600; font-size: 14px; padding-top: 12px; }
+.pl-amount { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+/* Avatar */
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; background: rgba(13,33,55,0.1); color: var(--navy); }
+
+/* Cluster grid */
+.cluster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.cluster-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: all 0.15s; }
+.cluster-card:hover { border-color: var(--navy-light); box-shadow: var(--shadow); }
+.cluster-card.selected { border-color: var(--gold); background: var(--gold-pale); }
+.cluster-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.cluster-count { font-size: 12px; color: var(--text-3); }
+
+/* Modal overlay */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+.modal-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-body { padding: 18px 20px; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--text-3); padding: 4px; border-radius: 4px; display: flex; }
+.modal-close:hover { color: var(--text); background: var(--surface-3); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: #fff; padding: 12px 18px; border-radius: var(--radius); font-size: 13px; z-index: 200; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+.toast.show { opacity: 1; transform: none; }
+
+/* Auto-split preview */
+.split-preview { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 10px 0; }
+.split-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; text-align: center; }
+.split-item-label { font-size: 10px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+.split-item-val { font-size: 16px; font-weight: 700; color: var(--navy); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+
+/* Ledger member card */
+.ledger-profile { display: flex; align-items: center; gap: 16px; background: var(--navy); color: #fff; border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.ledger-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgba(200,153,42,0.25); border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--gold-light); flex-shrink: 0; }
+.ledger-name { font-size: 17px; font-weight: 700; }
+.ledger-meta { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+.fund-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.fund-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.fund-label { font-size: 11px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+.fund-val { font-size: 18px; font-weight: 700; color: var(--navy); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+.fund-card.loan .fund-val { color: var(--red); }
+.fund-card.deposit .fund-val { color: var(--green); }
+
+/* Cluster meeting table */
+.meeting-row-input { width: 100%; padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; background: var(--gold-pale); outline: none; }
+.meeting-row-input:focus { border-color: var(--gold); }
+
+/* Utils */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-5 { margin-bottom: 20px; }
+.text-sm { font-size: 12px; }
+.text-muted { color: var(--text-3); }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-gold { color: var(--gold); }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.font-bold { font-weight: 600; }
+.w-full { width: 100%; }
+.hidden { display: none; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+/* PIN Login */
+.pin-overlay { position:fixed;inset:0;background:var(--navy);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column; }
+.pin-box { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:40px;width:340px;text-align:center; }
+.pin-logo { width:56px;height:56px;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px; }
+.pin-title { color:#fff;font-size:18px;font-weight:700;margin-bottom:4px; }
+.pin-sub { color:rgba(255,255,255,0.45);font-size:13px;margin-bottom:28px; }
+.pin-dots { display:flex;justify-content:center;gap:12px;margin-bottom:24px; }
+.pin-dot { width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);transition:all 0.15s; }
+.pin-dot.filled { background:var(--gold);border-color:var(--gold); }
+.pin-pad { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+.pin-key { padding:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:18px;font-weight:500;cursor:pointer;transition:all 0.1s;font-family:inherit; }
+.pin-key:hover { background:rgba(255,255,255,0.12); }
+.pin-key:active { transform:scale(0.94); }
+.pin-error { color:#f87171;font-size:12px;margin-top:12px;min-height:18px; }
+.pin-hint { color:rgba(255,255,255,0.25);font-size:11px;margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <div class="pin-logo">🤝</div>
+    <div class="pin-title">Iremide Cooperative</div>
+    <div class="pin-sub">Enter your PIN to continue</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key" onclick="pinClear()" style="font-size:13px;color:rgba(255,255,255,0.5)">Clear</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key" onclick="pinBack()" style="font-size:16px">⌫</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-hint" id="pinHint">Default PIN: 1234 · Change in Settings</div>
+  </div>
+</div>
+
+<!-- Firebase loading overlay -->
+<div id="fbLoading" style="position:fixed;inset:0;background:var(--navy);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px">🤝</div>
+  <div style="color:#fff;font-size:15px;font-weight:600">Iremide Cooperative</div>
+  <div id="fbLoadMsg" style="color:rgba(255,255,255,0.5);font-size:13px">Connecting to database…</div>
+  <div style="width:180px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+    <div id="fbLoadBar" style="height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width 0.4s ease"></div>
+  </div>
+</div>
+
+<!-- Firebase not configured banner (shown until user adds config) -->
+<div id="fbBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:500;background:#b91c1c;color:#fff;padding:10px 20px;font-size:13px;display:none;align-items:center;justify-content:space-between">
+  <span>⚠ Firebase not configured — data is saving locally only. Go to Settings → Firebase to connect your database.</span>
+  <button onclick="document.getElementById('fbBanner').style.display='none';navigate('settings')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Configure →</button>
+</div>
+
+<div class="app">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon">🤝</div>
+      <div class="brand-name">Iremide Cooperative</div>
+    </div>
+    <div class="brand-sub">Multipurpose Union</div>
+  </div>
+
+  <nav class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Management</div>
+    <div class="nav-item" onclick="navigate('members')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Members
+    </div>
+    <div class="nav-item" onclick="navigate('contributions')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Contributions
+    </div>
+    <div class="nav-item" onclick="navigate('loans')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Loans
+    </div>
+    <div class="nav-item" onclick="navigate('expenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Expenses
+    </div>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Clusters</div>
+    <div class="nav-item" onclick="navigate('cluster-meeting')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Weekly Meeting
+    </div>
+    <div class="nav-item" onclick="navigate('cluster-summary')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Cluster Summary
+    </div>
+  </nav>
+
+  <nav class="nav-section">
+    <div class="nav-label">Records</div>
+    <div class="nav-item" onclick="navigate('ledger')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Member Ledger
+    </div>
+    <div class="nav-item" onclick="navigate('email')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Email Members
+    </div>
+    <div class="nav-item" onclick="navigate('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a2 2 0 0 0-2.83 0l-.71.71a2 2 0 0 1-2.83 0l-.7-.71a2 2 0 0 0-2.83 0l-.71.71a2 2 0 0 1-2.83 0"/></svg>
+      Settings
+    </div>
+    <div class="nav-item" onclick="lockApp()" style="margin-top:4px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Lock App
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <p>Iremide Cooperative<br>Management System v1.0</p>
+    <div id="backupStatus" style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,0.05);border-radius:5px;font-size:10px;color:rgba(255,255,255,0.35);line-height:1.5">
+      Last backup: <span id="lastBackupTime">Never</span>
+    </div>
+    <button onclick="backupData()" style="margin-top:6px;width:100%;padding:6px;background:rgba(200,153,42,0.15);border:1px solid rgba(200,153,42,0.3);border-radius:5px;color:var(--gold-light);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit">
+      💾 Backup Now
+    </button>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">Dashboard</div>
+      <div class="page-subtitle" id="pageSubtitle">Overview of cooperative finances</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-bar" style="width:220px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="globalSearch" placeholder="Search members..." oninput="globalSearchFn(this.value)">
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="backupData()" title="Download full backup of all data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Backup
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('restoreInput').click()" title="Restore data from a backup file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Restore
+      </button>
+      <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="restoreData(this)">
+      <button class="btn btn-primary btn-sm" onclick="exportData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="content" id="content"></div>
+</main>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="addMemberModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="memberModalTitle">Add New Member</div>
+      <button class="modal-close" onclick="closeModal('addMemberModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Card Number *</label><input id="m-card" placeholder="e.g. 007"></div>
+        <div class="form-group"><label>Full Name *</label><input id="m-name" placeholder="Mrs Grace Adenurole"></div>
+        <div class="form-group"><label>Cluster/Department *</label>
+          <select id="m-cluster"><option value="">Select cluster</option></select>
+        </div>
+        <div class="form-group"><label>Date of Admission</label><input id="m-date" type="date"></div>
+        <div class="form-group"><label>Phone Number</label><input id="m-phone" placeholder="08012345678"></div>
+        <div class="form-group"><label>Email Address</label><input id="m-email" type="email" placeholder="member@email.com"></div>
+        <div class="form-group"><label>Status</label>
+          <select id="m-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="text-sm font-bold mb-2">Opening Balances (Balance Brought Forward)</div>
+      <div class="form-grid">
+        <div class="form-group"><label>B/F Shares (₦)</label><input id="m-shares" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>B/F Savings (₦)</label><input id="m-savings" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>B/F Building Fund (₦)</label><input id="m-building" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>B/F Deposit (₦)</label><input id="m-deposit" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>B/F Loan Balance (₦)</label><input id="m-loan" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>B/F Loan Interest (₦)</label><input id="m-loanint" type="number" placeholder="0" value="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
+        <button class="btn btn-outline" onclick="closeModal('addMemberModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Contribution Modal -->
+<div class="modal-overlay" id="addContribModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Record Contribution</div>
+      <button class="modal-close" onclick="closeModal('addContribModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date *</label><input id="c-date" type="date"></div>
+        <div class="form-group"><label>Card Number *</label>
+          <select id="c-card" onchange="fillContribMember()"><option value="">Select member</option></select>
+        </div>
+        <div class="form-group"><label>Member Name</label><input id="c-name" readonly style="background:var(--surface-3)"></div>
+        <div class="form-group"><label>Cluster</label><input id="c-cluster" readonly style="background:var(--surface-3)"></div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Total Amount Paid (₦) *</label>
+          <input id="c-amount" type="number" placeholder="e.g. 2000" oninput="calcSplit()" style="font-size:16px;font-weight:600">
+        </div>
+      </div>
+      <div class="split-preview" id="splitPreview">
+        <div class="split-item"><div class="split-item-label">Building</div><div class="split-item-val" id="sp-building">₦0</div></div>
+        <div class="split-item"><div class="split-item-label">Shares</div><div class="split-item-val" id="sp-shares">₦0</div></div>
+        <div class="split-item"><div class="split-item-label">Savings</div><div class="split-item-val" id="sp-savings">₦0</div></div>
+        <div class="split-item"><div class="split-item-label">Dev Levy</div><div class="split-item-val" id="sp-levy">₦0</div></div>
+      </div>
+      <div class="form-group mb-3"><label>Remarks</label><input id="c-remarks" placeholder="Optional note"></div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveContribution()">Save Contribution</button>
+        <button class="btn btn-outline" onclick="closeModal('addContribModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Loan Modal -->
+<div class="modal-overlay" id="addLoanModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Record Loan Transaction</div>
+      <button class="modal-close" onclick="closeModal('addLoanModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date *</label><input id="l-date" type="date"></div>
+        <div class="form-group"><label>Card Number *</label>
+          <select id="l-card" onchange="fillLoanMember()"><option value="">Select member</option></select>
+        </div>
+        <div class="form-group"><label>Member Name</label><input id="l-name" readonly style="background:var(--surface-3)"></div>
+        <div class="form-group"><label>Cluster</label><input id="l-cluster" readonly style="background:var(--surface-3)"></div>
+        <div class="form-group"><label>Transaction Type</label>
+          <select id="l-type"><option>Disbursement</option><option>Repayment</option><option>Interest Charge</option><option>Interest Payment</option></select>
+        </div>
+        <div class="form-group"><label>Loan Disbursed (₦)</label><input id="l-disb" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>Loan Repayment (₦)</label><input id="l-rep" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>Interest Charged (₦)</label><input id="l-intc" type="number" placeholder="0" value="0"></div>
+        <div class="form-group"><label>Interest Paid (₦)</label><input id="l-intp" type="number" placeholder="0" value="0"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Remarks</label><input id="l-remarks" placeholder="Optional note"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveLoan()">Save Transaction</button>
+        <button class="btn btn-outline" onclick="closeModal('addLoanModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="addExpenseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Record Expense</div>
+      <button class="modal-close" onclick="closeModal('addExpenseModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date *</label><input id="e-date" type="date"></div>
+        <div class="form-group"><label>Description *</label><input id="e-desc" placeholder="Description of expense"></div>
+        <div class="form-group"><label>Amount (₦) *</label><input id="e-amount" type="number" placeholder="0"></div>
+        <div class="form-group"><label>Paid To</label><input id="e-paidto" placeholder="Vendor / Person"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Remarks</label><input id="e-remarks" placeholder="Optional note"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+        <button class="btn btn-outline" onclick="closeModal('addExpenseModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Confirmation Modal -->
+<div class="modal-overlay" id="restoreConfirmModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">⚠ Confirm Restore</div>
+      <button class="modal-close" onclick="closeModal('restoreConfirmModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-light);border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--red);line-height:1.6">
+        <strong>This will replace ALL current data</strong> with the contents of the backup file. This cannot be undone.<br><br>
+        Current data will be permanently overwritten.
+      </div>
+      <div id="restoreFileInfo" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-bottom:16px"></div>
+      <div class="form-actions">
+        <button class="btn btn-danger" onclick="confirmRestore()">Yes, restore this backup</button>
+        <button class="btn btn-outline" onclick="cancelRestore()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA STORE =====
+const CLUSTERS = ["IWAJOWA CMS","IFELODUN CMS","JOMILOJU CMS 1","PEMISIRE 1","JOMILOJU CMS 2",
+  "PEMISIRE 2","GOD COVENANT","IBUKUN OLUWA","IYANU OLUWA","AWUJOOLA",
+  "IREOLUWA","TOLUWALASE","ASEYORI","OLUWASEYI"];
+
+const SPLIT = { building: 0.05, shares: 0.50, savings: 0.40, levy: 0.05 };
+
+const data = {
+  members: [
+    { card:"07", name:"Mrs Grace Adenurole", cluster:"IWAJOWA CMS", dateAdm:"", phone:"", email:"", status:"Active",
+      bfShares:6000, bfSavings:6000, bfBuilding:0, bfDeposit:0, bfLoan:28350, bfLoanInt:0 }
+  ],
+  contributions: [],
+  loans: [],
+  expenses: [],
+  settings: { levy: 0.05, shares: 0.50, savings: 0.40, building: 0.05 }
+};
+
+// ===== FIREBASE DATA LAYER =====
+let db = null;
+let _fbConnected = false;
+window._fbConnected = false;
+let _unsubscribers = [];
+
+// ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyA_G4eV58ZtgRjrLpE69K0vq2HbLZUOopQ",
+  authDomain:        "iremide-coop.firebaseapp.com",
+  projectId:         "iremide-coop",
+  storageBucket:     "iremide-coop.firebasestorage.app",
+  messagingSenderId: "118236670247",
+  appId:             "1:118236670247:web:a1654a55d351c09786e102"
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getFirebaseConfig() {
+  // Always use the hardcoded config above — Settings UI is for display only
+  return (FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.projectId !== 'PASTE_YOUR_projectId_HERE')
+    ? FIREBASE_CONFIG : null;
+}
+
+function saveFirebaseConfigLocal(cfg) {
+  // no-op — config is now hardcoded above
+}
+
+async function initFirebase() {
+  setLoadProgress(10, 'Reading configuration…');
+  const cfg = getFirebaseConfig();
+  if (!cfg || !cfg.projectId) {
+    setLoadProgress(100, 'No Firebase config — using local storage');
+    loadLocalFallback();
+    setTimeout(finishLoading, 400);
+    showFbBanner();
+    return;
+  }
+  // Timeout after 8 seconds — fall back to local storage
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Connection timed out after 8 seconds')), 8000)
+  );
+  try {
+    setLoadProgress(30, 'Connecting to Firebase…');
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    db = firebase.firestore();
+    // Enable offline persistence so it works even with poor connectivity
+    try {
+      await db.enablePersistence({ synchronizeTabs: true });
+    } catch(e) {
+      if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn('Persistence:', e);
+    }
+    setLoadProgress(60, 'Loading data…');
+    await Promise.race([loadAllFromFirebase(), timeout]);
+    setLoadProgress(100, 'Connected ✓');
+    _fbConnected = true;
+    window._fbConnected = true;
+    subscribeToChanges();
+    setTimeout(finishLoading, 400);
+  } catch(err) {
+    console.error('Firebase error:', err.message);
+    setLoadProgress(100, 'Using local storage (Firebase: ' + err.message + ')');
+    db = null;
+    loadLocalFallback();
+    showFbBanner();
+    setTimeout(finishLoading, 1500);
+  }
+}
+
+function setLoadProgress(pct, msg) {
+  const bar = document.getElementById('fbLoadBar');
+  const msgEl = document.getElementById('fbLoadMsg');
+  if (bar) bar.style.width = pct + '%';
+  if (msgEl) msgEl.textContent = msg;
+}
+
+function finishLoading() {
+  const overlay = document.getElementById('fbLoading');
+  if (overlay) { overlay.style.opacity = '0'; overlay.style.transition = 'opacity 0.3s'; setTimeout(()=>overlay.style.display='none', 300); }
+}
+
+function showFbBanner() {
+  const b = document.getElementById('fbBanner');
+  if (b) b.style.display = 'flex';
+}
+
+// ===== FIRESTORE COLLECTIONS =====
+const COLL = { members:'members', contributions:'contributions', loans:'loans', expenses:'expenses', settings:'settings' };
+
+async function loadAllFromFirebase() {
+  const [mSnap, cSnap, lSnap, eSnap, sSnap] = await Promise.all([
+    db.collection(COLL.members).get(),
+    db.collection(COLL.contributions).get(),
+    db.collection(COLL.loans).get(),
+    db.collection(COLL.expenses).get(),
+    db.collection(COLL.settings).doc('config').get()
+  ]);
+  const byDateDesc = (a,b) => (b.date||'').localeCompare(a.date||'');
+  data.members = mSnap.docs.map(d => ({id:d.id, ...d.data()}));
+  data.contributions = cSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
+  data.loans = lSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
+  data.expenses = eSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
+  if (sSnap.exists) {
+    const s = sSnap.data();
+    if (s.settings) Object.assign(data.settings, s.settings);
+    if (s.emailjs) data.emailjs = s.emailjs;
+    if (s.firebaseConfig) data.firebaseConfig = s.firebaseConfig;
+  }
+}
+
+function subscribeToChanges() {
+  _unsubscribers.forEach(u => u());
+  _unsubscribers = [];
+  const byDateDesc = (a,b) => (b.date||'').localeCompare(a.date||'');
+  _unsubscribers.push(
+    db.collection(COLL.members).onSnapshot(snap => {
+      data.members = snap.docs.map(d => ({id:d.id,...d.data()}));
+      if (['members','dashboard','cluster-summary','cluster-meeting'].includes(currentPage)) render(currentPage);
+    }),
+    db.collection(COLL.contributions).onSnapshot(snap => {
+      data.contributions = snap.docs.map(d => ({id:d.id,...d.data()})).sort(byDateDesc);
+      if (['contributions','dashboard','ledger'].includes(currentPage)) render(currentPage);
+    }),
+    db.collection(COLL.loans).onSnapshot(snap => {
+      data.loans = snap.docs.map(d => ({id:d.id,...d.data()})).sort(byDateDesc);
+      if (['loans','dashboard','ledger'].includes(currentPage)) render(currentPage);
+    }),
+    db.collection(COLL.expenses).onSnapshot(snap => {
+      data.expenses = snap.docs.map(d => ({id:d.id,...d.data()})).sort(byDateDesc);
+      if (['expenses','dashboard'].includes(currentPage)) render(currentPage);
+    })
+  );
+}
+
+// ===== FIREBASE WRITE HELPERS =====
+async function fbSaveMember(member) {
+  if (!db) return saveLocal();
+  const { id, ...fields } = member;
+  if (id) {
+    await db.collection(COLL.members).doc(id).set(fields);
+  } else {
+    const ref = await db.collection(COLL.members).add(fields);
+    member.id = ref.id;
+  }
+}
+
+async function fbSaveContrib(contrib) {
+  if (!db) return saveLocal();
+  const { id, ...fields } = contrib;
+  if (id) { await db.collection(COLL.contributions).doc(id).set(fields); }
+  else { const r = await db.collection(COLL.contributions).add(fields); contrib.id = r.id; }
+}
+
+async function fbSaveLoan(loan) {
+  if (!db) return saveLocal();
+  const { id, ...fields } = loan;
+  if (id) { await db.collection(COLL.loans).doc(id).set(fields); }
+  else { const r = await db.collection(COLL.loans).add(fields); loan.id = r.id; }
+}
+
+async function fbSaveExpense(expense) {
+  if (!db) return saveLocal();
+  const { id, ...fields } = expense;
+  if (id) { await db.collection(COLL.expenses).doc(id).set(fields); }
+  else { const r = await db.collection(COLL.expenses).add(fields); expense.id = r.id; }
+}
+
+async function fbSaveSettings() {
+  if (!db) return saveLocal();
+  await db.collection(COLL.settings).doc('config').set({
+    settings: data.settings,
+    emailjs: data.emailjs || {},
+    firebaseConfig: data.firebaseConfig || {},
+    updatedAt: new Date().toISOString()
+  }, { merge: true });
+}
+
+async function fbVoidRecord(type, docId, voided) {
+  if (!db) { saveLocal(); return; }
+  await db.collection(COLL[type]).doc(docId).update({ voided });
+}
+
+async function fbDeleteRecord(type, docId) {
+  if (!db) { saveLocal(); return; }
+  await db.collection(COLL[type]).doc(docId).delete();
+}
+
+// ===== LOCAL FALLBACK =====
+function saveLocal() {
+  try { localStorage.setItem('iremide_data', JSON.stringify(data)); } catch(e) {}
+}
+
+function loadLocalFallback() {
+  try {
+    const d = localStorage.getItem('iremide_data');
+    if (d) { const p = JSON.parse(d); Object.assign(data, p); }
+  } catch(e) {}
+}
+
+// ===== LEGACY COMPAT (called throughout app) =====
+function save() { if (!db) saveLocal(); }
+function load() { if (!db) loadLocalFallback(); }
+
+// ===== FIREBASE CONFIG UI =====
+async function saveFirebaseConfig() {
+  toast('✓ Firebase config is hardcoded in the file — no action needed. The app connects automatically.');
+}
+
+async function testFirebaseConnection() {
+  if (!db) { toast('Not connected — check the FIREBASE_CONFIG block at the top of the script and ensure your Firestore rules allow read/write'); return; }
+  try {
+    await db.collection('_test').doc('ping').set({ t: Date.now() });
+    await db.collection('_test').doc('ping').delete();
+    toast('✓ Firebase connection is working perfectly');
+  } catch(e) {
+    toast('✗ Connection test failed: ' + (e.message||'Check Firestore rules allow read/write in test mode'));
+  }
+}
+
+async function migrateLocalToFirebase() {
+  if (!db) { toast('Firebase not connected'); return; }
+  const d = localStorage.getItem('iremide_data');
+  if (!d) { toast('No local data found to migrate'); return; }
+  const local = JSON.parse(d);
+  if (!confirm(`Upload ${(local.members||[]).length} members, ${(local.contributions||[]).length} contributions, ${(local.loans||[]).length} loans, ${(local.expenses||[]).length} expenses to Firebase?\n\nThis will add to any existing Firebase data.`)) return;
+  toast('Uploading…');
+  const batch = db.batch();
+  (local.members||[]).forEach(m => { const {id,...f}=m; batch.set(db.collection(COLL.members).doc(), f); });
+  (local.contributions||[]).forEach(c => { const {id,...f}=c; batch.set(db.collection(COLL.contributions).doc(), f); });
+  (local.loans||[]).forEach(l => { const {id,...f}=l; batch.set(db.collection(COLL.loans).doc(), f); });
+  (local.expenses||[]).forEach(e => { const {id,...f}=e; batch.set(db.collection(COLL.expenses).doc(), f); });
+  await batch.commit();
+  toast(`✓ Migrated to Firebase successfully`);
+  await loadAllFromFirebase();
+  render(currentPage);
+}
+
+// ===== HELPERS =====
+const fmt = n => '₦' + (Number(n)||0).toLocaleString('en-NG', {minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtN = n => (Number(n)||0).toLocaleString('en-NG');
+const today = () => new Date().toISOString().split('T')[0];
+const initials = name => name.split(' ').filter(Boolean).slice(-2).map(n=>n[0]).join('').toUpperCase();
+
+function memberByCard(card) { return data.members.find(m => m.card === card); }
+
+function memberContribs(card) { return data.contributions.filter(c => c.card === card && !c.voided); }
+function memberLoans(card) { return data.loans.filter(l => l.card === card && !l.voided); }
+
+function calcMemberFunds(card) {
+  const m = memberByCard(card);
+  if (!m) return {};
+  const contribs = memberContribs(card);
+  const loans = memberLoans(card);
+  return {
+    shares: m.bfShares + contribs.reduce((s,c) => s + (c.shares||0), 0),
+    savings: m.bfSavings + contribs.reduce((s,c) => s + (c.savings||0), 0),
+    building: m.bfBuilding + contribs.reduce((s,c) => s + (c.building||0), 0),
+    deposit: m.bfDeposit,
+    loan: m.bfLoan + loans.reduce((s,l) => s + (l.disb||0) - (l.rep||0), 0),
+    loanInt: m.bfLoanInt + loans.reduce((s,l) => s + (l.intCharged||0) - (l.intPaid||0), 0),
+    totalPaid: contribs.reduce((s,c) => s + (c.amount||0), 0),
+    levy: contribs.reduce((s,c) => s + (c.levy||0), 0)
+  };
+}
+
+function totalsByCluster(cluster) {
+  const members = data.members.filter(m => m.cluster === cluster);
+  let shares=0,savings=0,building=0,deposit=0,loan=0,loanInt=0,totalPaid=0;
+  members.forEach(m => {
+    const f = calcMemberFunds(m.card);
+    shares += f.shares||0; savings += f.savings||0; building += f.building||0;
+    deposit += f.deposit||0; loan += f.loan||0; loanInt += f.loanInt||0;
+    totalPaid += f.totalPaid||0;
+  });
+  return { count: members.length, shares, savings, building, deposit, loan, loanInt, totalPaid };
+}
+
+function grandTotals() {
+  return data.members.reduce((acc, m) => {
+    const f = calcMemberFunds(m.card);
+    acc.shares += f.shares||0; acc.savings += f.savings||0; acc.building += f.building||0;
+    acc.deposit += f.deposit||0; acc.loan += f.loan||0; acc.loanInt += f.loanInt||0;
+    acc.levy += f.levy||0; acc.totalPaid += f.totalPaid||0;
+    return acc;
+  }, {shares:0,savings:0,building:0,deposit:0,loan:0,loanInt:0,levy:0,totalPaid:0});
+}
+
+function totalExpenses() { return data.expenses.filter(e=>!e.voided).reduce((s,e) => s + (e.amount||0), 0); }
+function totalInterestCharged() { return data.loans.filter(l=>!l.voided).reduce((s,l) => s + (l.intCharged||0), 0); }
+function totalInterestPaid() { return data.loans.filter(l=>!l.voided).reduce((s,l) => s + (l.intPaid||0), 0); }
+function totalLevyCollected() { return data.contributions.filter(c=>!c.voided).reduce((s,c) => s + (c.levy||0), 0); }
+function coopIncome() { return totalLevyCollected() + totalInterestCharged(); }
+function netPL() { return coopIncome() - totalExpenses(); }
+
+// ===== NAVIGATION =====
+let currentPage = 'dashboard';
+const pages = {
+  dashboard: { title:'Dashboard', subtitle:'Overview of cooperative finances' },
+  members: { title:'Members', subtitle:'Register and manage cooperative members' },
+  contributions: { title:'Contributions', subtitle:'Weekly contribution records with auto-split' },
+  loans: { title:'Loans', subtitle:'Loan disbursements, repayments and interest' },
+  expenses: { title:'Expenses', subtitle:'Cooperative operating expenses' },
+  'cluster-meeting': { title:'Weekly Cluster Meeting', subtitle:'Record contributions by cluster during meetings' },
+  'cluster-summary': { title:'Cluster Summary', subtitle:'Totals and performance per cluster' },
+  ledger: { title:'Member Ledger', subtitle:'Full account view for any member' },
+  email: { title:'Email Members', subtitle:'Send statements, receipts and announcements' },
+  settings: { title:'Settings', subtitle:'Split ratios and system configuration' }
+};
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(`'${page}'`)) n.classList.add('active');
+  });
+  const p = pages[page] || {};
+  document.getElementById('pageTitle').textContent = p.title || page;
+  document.getElementById('pageSubtitle').textContent = p.subtitle || '';
+  render(page);
+}
+
+function render(page) {
+  const c = document.getElementById('content');
+  const map = {
+    dashboard: renderDashboard,
+    members: renderMembers,
+    contributions: renderContributions,
+    loans: renderLoans,
+    expenses: renderExpenses,
+    'cluster-meeting': renderClusterMeeting,
+    'cluster-summary': renderClusterSummary,
+    ledger: renderLedger,
+    email: renderEmail,
+    settings: renderSettings
+  };
+  c.innerHTML = (map[page] || (() => '<p>Page not found</p>'))();
+  afterRender(page);
+}
+
+// ===== RENDER FUNCTIONS =====
+
+function renderDashboard() {
+  const gt = grandTotals();
+  const income = coopIncome();
+  const exp = totalExpenses();
+  const pl = netPL();
+  const activeMembers = data.members.filter(m => m.status === 'Active').length;
+
+  return `
+  <div class="metrics-grid">
+    <div class="metric-card navy">
+      <div class="metric-label">Total Members</div>
+      <div class="metric-value">${data.members.length}</div>
+      <div class="metric-sub">${activeMembers} active</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total Collected</div>
+      <div class="metric-value">${fmt(gt.totalPaid)}</div>
+      <div class="metric-sub">All contributions</div>
+    </div>
+    <div class="metric-card gold">
+      <div class="metric-label">Total Shares</div>
+      <div class="metric-value">${fmt(gt.shares)}</div>
+      <div class="metric-sub">Across all members</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label">Total Savings</div>
+      <div class="metric-value">${fmt(gt.savings)}</div>
+      <div class="metric-sub">Across all members</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Building Fund</div>
+      <div class="metric-value">${fmt(gt.building)}</div>
+      <div class="metric-sub">Cumulative</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-label">Loans Outstanding</div>
+      <div class="metric-value">${fmt(gt.loan)}</div>
+      <div class="metric-sub">Net loan balance</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Loan Interest Due</div>
+      <div class="metric-value">${fmt(gt.loanInt)}</div>
+      <div class="metric-sub">Charged – Paid</div>
+    </div>
+    <div class="metric-card ${pl>=0?'green':'red'}">
+      <div class="metric-label">Net P&L</div>
+      <div class="metric-value">${fmt(pl)}</div>
+      <div class="metric-sub">${pl>=0?'Surplus':'Deficit'}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Cooperative Income & Expenses</div><div class="card-subtitle">Profit & Loss summary</div></div>
+      </div>
+      <div class="card-body">
+        <div class="pl-row"><span>Development Levy Income</span><span class="pl-amount text-green">${fmt(totalLevyCollected())}</span></div>
+        <div class="pl-row"><span>Loan Interest Income</span><span class="pl-amount text-green">${fmt(totalInterestCharged())}</span></div>
+        <div class="pl-row total"><span>Total Income</span><span class="pl-amount text-green">${fmt(income)}</span></div>
+        <div class="pl-row"><span>Operating Expenses</span><span class="pl-amount text-red">(${fmt(exp)})</span></div>
+        <div class="pl-row total" style="border-top:2px solid var(--border-strong);margin-top:4px">
+          <span>Net ${pl>=0?'Surplus':'Deficit'}</span>
+          <span class="pl-amount ${pl>=0?'text-green':'text-red'}">${fmt(pl)}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Fund Balances</div><div class="card-subtitle">All members combined</div></div>
+      </div>
+      <div class="card-body">
+        <div class="pl-row"><span>Total Shares</span><span class="pl-amount">${fmt(gt.shares)}</span></div>
+        <div class="pl-row"><span>Total Savings</span><span class="pl-amount">${fmt(gt.savings)}</span></div>
+        <div class="pl-row"><span>Building Fund</span><span class="pl-amount">${fmt(gt.building)}</span></div>
+        <div class="pl-row"><span>Total Deposits</span><span class="pl-amount">${fmt(gt.deposit)}</span></div>
+        <div class="pl-row"><span>Dev Levy Collected</span><span class="pl-amount">${fmt(gt.levy)}</span></div>
+        <div class="pl-row total"><span>Loans Outstanding</span><span class="pl-amount text-red">${fmt(gt.loan)}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-header">
+      <div class="card-title">Clusters at a glance</div>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Cluster</th><th>Members</th><th class="td-num">Shares</th>
+            <th class="td-num">Savings</th><th class="td-num">Loans</th><th class="td-num">Collected</th>
+          </tr></thead>
+          <tbody>
+            ${CLUSTERS.map(cl => {
+              const t = totalsByCluster(cl);
+              return `<tr>
+                <td class="td-name">${cl}</td>
+                <td>${t.count}</td>
+                <td class="td-num">${fmt(t.shares)}</td>
+                <td class="td-num">${fmt(t.savings)}</td>
+                <td class="td-num ${t.loan>0?'text-red':''}">${fmt(t.loan)}</td>
+                <td class="td-num">${fmt(t.totalPaid)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderMembers() {
+  return `
+  <div class="section-header">
+    <div><div class="section-title">All Members (${data.members.length})</div></div>
+    <div class="flex gap-2">
+      <div class="search-bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="memberSearch" placeholder="Search by name or card..." oninput="filterMembers(this.value)"></div>
+      <select id="clusterFilter" onchange="filterMembers(document.getElementById('memberSearch').value)" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Clusters</option>
+        ${CLUSTERS.map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openAddMember()">+ Add Member</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table id="membersTable">
+        <thead><tr>
+          <th>Card</th><th>Name</th><th>Cluster</th><th>Phone</th>
+          <th class="td-num">Shares</th><th class="td-num">Savings</th>
+          <th class="td-num">Loan Bal</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="membersTbody">${memberRows()}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function memberRows(filter='', cluster='') {
+  let members = data.members;
+  if (filter) members = members.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()) || m.card.includes(filter));
+  if (cluster) members = members.filter(m => m.cluster === cluster);
+  if (!members.length) return '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-3)">No members found</td></tr>';
+  return members.map(m => {
+    const f = calcMemberFunds(m.card);
+    return `<tr>
+      <td><span class="mono" style="font-size:12px;background:var(--surface-3);padding:2px 7px;border-radius:4px">${m.card}</span></td>
+      <td><div class="flex items-center gap-2">
+        <div class="avatar">${initials(m.name)}</div>
+        <div><div class="td-name">${m.name}</div><div class="text-sm text-muted">${m.email||''}</div></div>
+      </div></td>
+      <td><span class="badge badge-navy">${m.cluster}</span></td>
+      <td class="text-sm">${m.phone||'—'}</td>
+      <td class="td-num">${fmt(f.shares)}</td>
+      <td class="td-num">${fmt(f.savings)}</td>
+      <td class="td-num ${f.loan>0?'text-red':''}">${fmt(f.loan)}</td>
+      <td><span class="badge ${m.status==='Active'?'badge-green':'badge-red'}">${m.status}</span></td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')">Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="viewLedger('${m.card}')" style="margin-left:4px">Ledger</button>
+        ${m.email ? `<button class="btn btn-outline btn-sm" onclick="emailMemberStatement('${m.card}')" style="margin-left:4px;color:var(--navy)" title="Send account statement">✉</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No email on file">✉</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterMembers(val) {
+  const cluster = document.getElementById('clusterFilter')?.value || '';
+  const tbody = document.getElementById('membersTbody');
+  if (tbody) tbody.innerHTML = memberRows(val, cluster);
+}
+
+function renderContributions() {
+  const recent = [...data.contributions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,100);
+  const total = data.contributions.reduce((s,c)=>s+(c.amount||0),0);
+  const totalShares = data.contributions.reduce((s,c)=>s+(c.shares||0),0);
+  const totalSavings = data.contributions.reduce((s,c)=>s+(c.savings||0),0);
+  const totalBuilding = data.contributions.reduce((s,c)=>s+(c.building||0),0);
+  const totalLevy = data.contributions.reduce((s,c)=>s+(c.levy||0),0);
+  return `
+  <div class="metrics-grid" style="grid-template-columns:repeat(5,1fr)">
+    <div class="metric-card"><div class="metric-label">Total Collected</div><div class="metric-value" style="font-size:18px">${fmt(total)}</div></div>
+    <div class="metric-card gold"><div class="metric-label">Building Fund</div><div class="metric-value" style="font-size:18px">${fmt(totalBuilding)}</div></div>
+    <div class="metric-card"><div class="metric-label">Shares</div><div class="metric-value" style="font-size:18px">${fmt(totalShares)}</div></div>
+    <div class="metric-card green"><div class="metric-label">Savings</div><div class="metric-value" style="font-size:18px">${fmt(totalSavings)}</div></div>
+    <div class="metric-card"><div class="metric-label">Dev Levy</div><div class="metric-value" style="font-size:18px">${fmt(totalLevy)}</div></div>
+  </div>
+
+  <div class="split-info mb-4">
+    <span class="text-sm text-muted" style="align-self:center">Auto-split per ₦2,000:</span>
+    <div class="split-chip"><div class="split-dot" style="background:#c8992a"></div>Building Fund 5% (₦100)</div>
+    <div class="split-chip"><div class="split-dot" style="background:#1a3a5c"></div>Shares 50% (₦1,000)</div>
+    <div class="split-chip"><div class="split-dot" style="background:#1a6b3c"></div>Savings 40% (₦800)</div>
+    <div class="split-chip"><div class="split-dot" style="background:#d97706"></div>Dev Levy 5% (₦100)</div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Contribution Records (${data.contributions.length})</div>
+    <div class="flex gap-2">
+      <select id="contribClusterFilter" onchange="filterContribs()" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Clusters</option>${CLUSTERS.map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openAddContrib()">+ Record Contribution</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Card</th><th>Member</th><th>Cluster</th>
+          <th class="td-num">Total Paid</th><th class="td-num">Building</th>
+          <th class="td-num">Shares</th><th class="td-num">Savings</th>
+          <th class="td-num">Dev Levy</th><th>Remarks</th><th>Action</th>
+        </tr></thead>
+        <tbody id="contribTbody">${contribRows()}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function contribRows(cluster='') {
+  let rows = [...data.contributions].sort((a,b)=>b.date.localeCompare(a.date));
+  if (cluster) rows = rows.filter(c => c.cluster === cluster);
+  if (!rows.length) return '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-3)">No contributions recorded yet. Click "Record Contribution" to begin.</td></tr>';
+  return rows.map((c,i)=>{
+    const idx = data.contributions.indexOf(c);
+    const voided = c.voided;
+    const rs = voided ? 'opacity:0.45;text-decoration:line-through;' : '';
+    return `<tr style="${rs}background:${voided?'var(--surface-3)':''}">
+      <td class="text-sm">${c.date}</td>
+      <td><span class="mono" style="font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:4px">${c.card}</span></td>
+      <td class="td-name">${c.memberName}</td>
+      <td><span class="badge badge-navy" style="font-size:10px">${c.cluster}</span></td>
+      <td class="td-num font-bold">${fmt(c.amount)}</td>
+      <td class="td-num text-gold">${fmt(c.building)}</td>
+      <td class="td-num">${fmt(c.shares)}</td>
+      <td class="td-num text-green">${fmt(c.savings)}</td>
+      <td class="td-num" style="color:var(--amber)">${fmt(c.levy)}</td>
+      <td class="text-sm text-muted">${c.remarks||'—'}</td>
+      <td style="white-space:nowrap">
+        ${voided
+          ? `<span class="badge badge-red" style="font-size:10px">Voided</span>
+             <button class="btn btn-outline btn-sm" style="margin-left:4px;font-size:11px" onclick="deleteRecord('contributions',${idx})">Delete</button>`
+          : `<button class="btn btn-outline btn-sm" style="font-size:11px;color:var(--red)" onclick="voidRecord('contributions',${idx})">Void</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterContribs() {
+  const cluster = document.getElementById('contribClusterFilter')?.value || '';
+  const tbody = document.getElementById('contribTbody');
+  if (tbody) tbody.innerHTML = contribRows(cluster);
+}
+
+function renderLoans() {
+  const totalDisb = data.loans.reduce((s,l)=>s+(l.disb||0),0);
+  const totalRep = data.loans.reduce((s,l)=>s+(l.rep||0),0);
+  const totalIntC = data.loans.reduce((s,l)=>s+(l.intCharged||0),0);
+  const totalIntP = data.loans.reduce((s,l)=>s+(l.intPaid||0),0);
+  return `
+  <div class="metrics-grid">
+    <div class="metric-card navy"><div class="metric-label">Total Disbursed</div><div class="metric-value">${fmt(totalDisb)}</div></div>
+    <div class="metric-card green"><div class="metric-label">Total Repaid</div><div class="metric-value">${fmt(totalRep)}</div></div>
+    <div class="metric-card red"><div class="metric-label">Loans Outstanding</div><div class="metric-value">${fmt(totalDisb-totalRep)}</div></div>
+    <div class="metric-card"><div class="metric-label">Interest Charged</div><div class="metric-value">${fmt(totalIntC)}</div></div>
+    <div class="metric-card gold"><div class="metric-label">Interest Paid</div><div class="metric-value">${fmt(totalIntP)}</div></div>
+    <div class="metric-card"><div class="metric-label">Interest Outstanding</div><div class="metric-value">${fmt(totalIntC-totalIntP)}</div></div>
+    <div class="metric-card"><div class="metric-label">Repayment Rate</div><div class="metric-value">${totalDisb>0?((totalRep/totalDisb)*100).toFixed(1)+'%':'—'}</div><div class="metric-sub">of total disbursed</div></div>
+  </div>
+  <div class="section-header">
+    <div class="section-title">Loan Transactions (${data.loans.length})</div>
+    <button class="btn btn-primary btn-sm" onclick="openAddLoan()">+ Record Loan Transaction</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Card</th><th>Member</th><th>Cluster</th><th>Type</th>
+          <th class="td-num">Disbursed</th><th class="td-num">Repayment</th>
+          <th class="td-num">Int Charged</th><th class="td-num">Int Paid</th><th>Remarks</th><th>Action</th>
+        </tr></thead>
+        <tbody>${loanRows()}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function loanRows() {
+  const rows = [...data.loans].sort((a,b)=>b.date.localeCompare(a.date));
+  if (!rows.length) return '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-3)">No loan transactions yet.</td></tr>';
+  return rows.map(l=>{
+    const idx = data.loans.indexOf(l);
+    const voided = l.voided;
+    const rs = voided ? 'opacity:0.45;text-decoration:line-through;' : '';
+    return `<tr style="${rs}background:${voided?'var(--surface-3)':''}">
+      <td class="text-sm">${l.date}</td>
+      <td><span class="mono" style="font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:4px">${l.card}</span></td>
+      <td class="td-name">${l.memberName}</td>
+      <td><span class="badge badge-navy" style="font-size:10px">${l.cluster}</span></td>
+      <td><span class="badge ${l.type==='Disbursement'?'badge-red':l.type==='Repayment'?'badge-green':'badge-amber'}">${l.type}</span></td>
+      <td class="td-num ${l.disb>0?'text-red':''}">${l.disb>0?fmt(l.disb):'—'}</td>
+      <td class="td-num ${l.rep>0?'text-green':''}">${l.rep>0?fmt(l.rep):'—'}</td>
+      <td class="td-num">${l.intCharged>0?fmt(l.intCharged):'—'}</td>
+      <td class="td-num text-green">${l.intPaid>0?fmt(l.intPaid):'—'}</td>
+      <td class="text-sm text-muted">${l.remarks||'—'}</td>
+      <td style="white-space:nowrap">
+        ${voided
+          ? `<span class="badge badge-red" style="font-size:10px">Voided</span>
+             <button class="btn btn-outline btn-sm" style="margin-left:4px;font-size:11px" onclick="deleteRecord('loans',${idx})">Delete</button>`
+          : `<button class="btn btn-outline btn-sm" style="font-size:11px;color:var(--red)" onclick="voidRecord('loans',${idx})">Void</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderExpenses() {
+  const totalExp = totalExpenses();
+  const income = coopIncome();
+  const pl = netPL();
+  return `
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="metric-label">Dev Levy Income</div><div class="metric-value">${fmt(totalLevyCollected())}</div></div>
+    <div class="metric-card"><div class="metric-label">Interest Income</div><div class="metric-value">${fmt(totalInterestCharged())}</div></div>
+    <div class="metric-card green"><div class="metric-label">Total Income</div><div class="metric-value">${fmt(income)}</div></div>
+    <div class="metric-card red"><div class="metric-label">Total Expenses</div><div class="metric-value">${fmt(totalExp)}</div></div>
+    <div class="metric-card ${pl>=0?'green':'red'}"><div class="metric-label">Net ${pl>=0?'Surplus':'Deficit'}</div><div class="metric-value">${fmt(pl)}</div></div>
+  </div>
+  <div class="section-header">
+    <div class="section-title">Expense Records (${data.expenses.length})</div>
+    <button class="btn btn-primary btn-sm" onclick="openAddExpense()">+ Record Expense</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th class="td-num">Amount</th><th>Paid To</th><th>Remarks</th><th>Action</th></tr></thead>
+        <tbody>${expenseRows()}</tbody>
+      </table>
+    </div>
+    ${data.expenses.length ? `<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:16px">
+      <span class="text-sm text-muted">Total Expenses:</span>
+      <span class="font-mono font-bold text-red">${fmt(totalExp)}</span>
+    </div>` : ''}
+  </div>`;
+}
+
+function expenseRows() {
+  const rows = [...data.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  if (!rows.length) return '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3)">No expenses recorded yet.</td></tr>';
+  return rows.map(e=>{
+    const idx = data.expenses.indexOf(e);
+    const voided = e.voided;
+    const rs = voided ? 'opacity:0.45;text-decoration:line-through;' : '';
+    return `<tr style="${rs}background:${voided?'var(--surface-3)':''}">
+      <td class="text-sm">${e.date}</td>
+      <td class="td-name">${e.desc}</td>
+      <td class="td-num text-red">${fmt(e.amount)}</td>
+      <td class="text-sm">${e.paidTo||'—'}</td>
+      <td class="text-sm text-muted">${e.remarks||'—'}</td>
+      <td style="white-space:nowrap">
+        ${voided
+          ? `<span class="badge badge-red" style="font-size:10px">Voided</span>
+             <button class="btn btn-outline btn-sm" style="margin-left:4px;font-size:11px" onclick="deleteRecord('expenses',${idx})">Delete</button>`
+          : `<button class="btn btn-outline btn-sm" style="font-size:11px;color:var(--red)" onclick="voidRecord('expenses',${idx})">Void</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClusterMeeting() {
+  const selectedCluster = window._meetingCluster || CLUSTERS[0];
+  const clusterMembers = data.members.filter(m => m.cluster === selectedCluster);
+  return `
+  <div class="section-header mb-4">
+    <div><div class="section-title">Select Cluster</div><div class="section-desc">Members load automatically based on cluster assignment in the Members sheet</div></div>
+    <div class="flex gap-2 items-center">
+      <input type="date" id="meetingDate" value="${today()}" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+      <button class="btn btn-gold btn-sm" onclick="saveMeetingContribs()">💾 Save All to Contributions</button>
+      <button class="btn btn-outline btn-sm" onclick="emailClusterReceipts()" title="Email contribution receipts to all members with email addresses">✉ Email Receipts</button>
+    </div>
+  </div>
+  <div class="cluster-grid mb-5">
+    ${CLUSTERS.map(cl=>{
+      const count = data.members.filter(m=>m.cluster===cl).length;
+      return `<div class="cluster-card ${cl===selectedCluster?'selected':''}" onclick="selectMeetingCluster('${cl}')">
+        <div class="cluster-name">${cl}</div>
+        <div class="cluster-count">${count} member${count!==1?'s':''}</div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">${selectedCluster}</div>
+        <div class="card-subtitle">${clusterMembers.length} members — fill in today's contributions below</div>
+      </div>
+      <div class="split-info" style="margin:0">
+        <div class="split-chip" style="font-size:11px"><div class="split-dot" style="background:#c8992a"></div>Bldg 5%</div>
+        <div class="split-chip" style="font-size:11px"><div class="split-dot" style="background:#1a3a5c"></div>Shares 50%</div>
+        <div class="split-chip" style="font-size:11px"><div class="split-dot" style="background:#1a6b3c"></div>Savings 40%</div>
+        <div class="split-chip" style="font-size:11px"><div class="split-dot" style="background:#d97706"></div>Levy 5%</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="meetingTable">
+        <thead><tr>
+          <th>Card</th><th>Member Name</th>
+          <th class="td-num">Shares Bal</th><th class="td-num">Savings Bal</th>
+          <th class="td-num">Loan Bal</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Today: Total Paid (₦)</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Building</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Shares</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Savings</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Dev Levy</th>
+          <th style="background:#fdf3dc;color:var(--gold);font-size:11px">Loan Repay (₦)</th>
+          <th>Remarks</th>
+        </tr></thead>
+        <tbody>
+          ${clusterMembers.length ? clusterMembers.map((m,i) => {
+            const f = calcMemberFunds(m.card);
+            return `<tr>
+              <td><span class="mono" style="font-size:11px">${m.card}</span></td>
+              <td class="td-name">${m.name}</td>
+              <td class="td-num">${fmt(f.shares)}</td>
+              <td class="td-num">${fmt(f.savings)}</td>
+              <td class="td-num ${f.loan>0?'text-red':''}">${fmt(f.loan)}</td>
+              <td><input class="meeting-row-input" data-card="${m.card}" data-field="amount" type="number" placeholder="0" oninput="autoSplit(this,${i})"></td>
+              <td><input class="meeting-row-input" id="mr-bld-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
+              <td><input class="meeting-row-input" id="mr-shr-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
+              <td><input class="meeting-row-input" id="mr-sav-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
+              <td><input class="meeting-row-input" id="mr-lev-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
+              <td><input class="meeting-row-input" data-card="${m.card}" data-field="loanrep" type="number" placeholder="0"></td>
+              <td><input class="meeting-row-input" data-card="${m.card}" data-field="remarks" type="text" placeholder="Note" style="background:var(--surface-2)"></td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text-3)">No members assigned to <strong>${selectedCluster}</strong> yet.<br>Go to Members and assign cluster to members.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    ${clusterMembers.length ? `
+    <div style="padding:12px 20px;border-top:1px solid var(--border);background:var(--gold-pale);border-radius:0 0 var(--radius) var(--radius)">
+      <span class="text-sm text-muted">Click "Save All to Contributions" to post all rows with amounts to the Contributions log.</span>
+    </div>` : ''}
+  </div>`;
+}
+
+function renderClusterSummary() {
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">All Clusters — Performance Summary</div>
+      <div class="card-subtitle">Balances include B/F + all recorded transactions to date</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Cluster</th><th>Members</th>
+          <th class="td-num">Shares</th><th class="td-num">Savings</th>
+          <th class="td-num">Building</th><th class="td-num">Deposits</th>
+          <th class="td-num">Loans</th><th class="td-num">Loan Interest</th>
+          <th class="td-num">Total Collected</th>
+        </tr></thead>
+        <tbody>
+          ${CLUSTERS.map(cl => {
+            const t = totalsByCluster(cl);
+            return `<tr>
+              <td class="td-name">${cl}</td>
+              <td style="text-align:center"><span class="badge badge-navy">${t.count}</span></td>
+              <td class="td-num">${fmt(t.shares)}</td>
+              <td class="td-num">${fmt(t.savings)}</td>
+              <td class="td-num">${fmt(t.building)}</td>
+              <td class="td-num">${fmt(t.deposit)}</td>
+              <td class="td-num ${t.loan>0?'text-red':''}">${fmt(t.loan)}</td>
+              <td class="td-num">${fmt(t.loanInt)}</td>
+              <td class="td-num font-bold">${fmt(t.totalPaid)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--navy);color:#fff">
+            <td class="td-name" style="color:#fff;padding:12px">TOTAL</td>
+            <td style="text-align:center;color:#fff">${data.members.length}</td>
+            ${(()=>{
+              const gt = grandTotals();
+              return `<td class="td-num" style="color:#fff">${fmt(gt.shares)}</td>
+              <td class="td-num" style="color:#fff">${fmt(gt.savings)}</td>
+              <td class="td-num" style="color:#fff">${fmt(gt.building)}</td>
+              <td class="td-num" style="color:#fff">${fmt(gt.deposit)}</td>
+              <td class="td-num" style="color:var(--gold-light)">${fmt(gt.loan)}</td>
+              <td class="td-num" style="color:#fff">${fmt(gt.loanInt)}</td>
+              <td class="td-num" style="color:var(--gold-light);font-weight:700">${fmt(gt.totalPaid)}</td>`;
+            })()}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderLedger() {
+  const selectedCard = window._ledgerCard || (data.members[0]?.card || '');
+  const m = memberByCard(selectedCard);
+  const f = m ? calcMemberFunds(selectedCard) : {};
+  const contribs = m ? [...memberContribs(selectedCard)].sort((a,b)=>b.date.localeCompare(a.date)) : [];
+  const loans = m ? [...memberLoans(selectedCard)].sort((a,b)=>b.date.localeCompare(a.date)) : [];
+
+  return `
+  <div class="section-header mb-4">
+    <div class="section-title">Select Member</div>
+    <div class="flex gap-2 items-center">
+      <select onchange="selectLedger(this.value)" style="padding:8px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;font-weight:500;min-width:280px">
+        <option value="">— Select a member —</option>
+        ${data.members.map(m=>`<option value="${m.card}" ${m.card===selectedCard?'selected':''}>${m.card} – ${m.name}</option>`).join('')}
+      </select>
+      <select onchange="filterLedgerByCluster(this.value)" style="padding:8px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">Filter by cluster</option>
+        ${CLUSTERS.map(c=>`<option>${c}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+
+  ${!m ? `<div class="card"><div class="card-body" style="text-align:center;padding:48px;color:var(--text-3)">
+    Select a member from the dropdown above to view their personal ledger
+  </div></div>` : `
+  <div class="ledger-profile">
+    <div class="ledger-avatar">${initials(m.name)}</div>
+    <div style="flex:1">
+      <div class="ledger-name">${m.name}</div>
+      <div class="ledger-meta">Card #${m.card} &nbsp;·&nbsp; ${m.cluster} &nbsp;·&nbsp; Admitted: ${m.dateAdm||'N/A'}</div>
+      <div class="ledger-meta" style="margin-top:4px">${m.phone||''} ${m.email?'· '+m.email:''}</div>
+    </div>
+    <span class="badge ${m.status==='Active'?'badge-green':'badge-red'}" style="font-size:13px">${m.status}</span>
+    ${m.email ? `<button class="btn btn-gold btn-sm" onclick="emailMemberStatement('${m.card}')">✉ Send Statement</button>` : `<span class="text-sm text-muted">No email on file</span>`}
+  </div>
+
+  <div class="fund-grid mb-4">
+    <div class="fund-card"><div class="fund-label">Shares</div><div class="fund-val">${fmt(f.shares)}</div></div>
+    <div class="fund-card"><div class="fund-label">Savings</div><div class="fund-val">${fmt(f.savings)}</div></div>
+    <div class="fund-card"><div class="fund-label">Building Fund</div><div class="fund-val">${fmt(f.building)}</div></div>
+    <div class="fund-card deposit"><div class="fund-label">Deposits</div><div class="fund-val">${fmt(f.deposit)}</div></div>
+    <div class="fund-card loan"><div class="fund-label">Loan Balance</div><div class="fund-val">${fmt(f.loan)}</div></div>
+    <div class="fund-card loan"><div class="fund-label">Loan Interest</div><div class="fund-val">${fmt(f.loanInt)}</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Contribution History (${contribs.length})</div>
+        <span class="text-sm text-muted font-mono">Total: ${fmt(f.totalPaid)}</span></div>
+      <div class="table-wrap" style="max-height:320px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Date</th><th class="td-num">Total</th><th class="td-num">Shares</th><th class="td-num">Savings</th><th class="td-num">Bldg</th><th class="td-num">Levy</th></tr></thead>
+          <tbody>${contribs.length ? contribs.map(c=>`<tr>
+            <td class="text-sm">${c.date}</td>
+            <td class="td-num font-bold">${fmt(c.amount)}</td>
+            <td class="td-num">${fmt(c.shares)}</td>
+            <td class="td-num">${fmt(c.savings)}</td>
+            <td class="td-num">${fmt(c.building)}</td>
+            <td class="td-num">${fmt(c.levy)}</td>
+          </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-3)">No contributions yet</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Loan Transaction History (${loans.length})</div></div>
+      <div class="table-wrap" style="max-height:320px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th class="td-num">Disbursed</th><th class="td-num">Repaid</th><th class="td-num">Int</th></tr></thead>
+          <tbody>${loans.length ? loans.map(l=>`<tr>
+            <td class="text-sm">${l.date}</td>
+            <td><span class="badge ${l.type==='Disbursement'?'badge-red':l.type==='Repayment'?'badge-green':'badge-amber'}" style="font-size:10px">${l.type}</span></td>
+            <td class="td-num ${l.disb>0?'text-red':''}">${l.disb>0?fmt(l.disb):'—'}</td>
+            <td class="td-num ${l.rep>0?'text-green':''}">${l.rep>0?fmt(l.rep):'—'}</td>
+            <td class="td-num">${(l.intCharged||0)>0?fmt(l.intCharged):'—'}</td>
+          </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No loans yet</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`}`;
+}
+
+function renderSettings() {
+  const ejs = data.emailjs || {};
+  const configured = !!(ejs.publicKey && ejs.serviceId && ejs.templateStatement);
+  return `
+  <div style="max-width:680px">
+
+    <div class="card mb-4" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <div><div class="card-title">🔥 Firebase Database</div>
+        <div class="card-subtitle">Config is hardcoded in the file — connects automatically on every open</div></div>
+        <span class="badge" id="fbStatusBadge" style="background:${_fbConnected?'var(--green-light)':'var(--amber-light)'};color:${_fbConnected?'var(--green)':'var(--amber)'}">${_fbConnected?'✓ Connected':'Connecting…'}</span>
+      </div>
+      <div class="card-body">
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.9;color:var(--text-2);margin-bottom:12px">
+          <strong>Project:</strong> ${FIREBASE_CONFIG.projectId}<br>
+          <strong>Auth Domain:</strong> ${FIREBASE_CONFIG.authDomain}<br>
+          <strong>App ID:</strong> ${FIREBASE_CONFIG.appId}
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
+          ${_fbConnected ? '<button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>' : ''}
+        </div>
+        ${_fbConnected ? `<div style="margin-top:10px;padding:10px;background:var(--green-light);border-radius:var(--radius-sm);font-size:12px;color:var(--green)">✓ Connected to Firebase — all data syncs to the cloud in real time across all devices</div>` : `<div style="margin-top:10px;padding:10px;background:var(--amber-light);border-radius:var(--radius-sm);font-size:12px;color:var(--amber)">⚠ Not yet connected. Make sure your Firestore database is created in test mode at console.firebase.google.com</div>`}
+      </div>
+    </div>
+
+    <div class="card mb-4" style="border-left:3px solid var(--navy)">
+      <div class="card-header">
+        <div><div class="card-title">🔐 PIN / Access Code</div>
+        <div class="card-subtitle">Change the PIN required to open the app</div></div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="form-group"><label>Current PIN</label><input id="pin-current" type="password" maxlength="8" placeholder="Current PIN"></div>
+          <div class="form-group"><label>New PIN</label><input id="pin-new" type="password" maxlength="8" placeholder="4–8 digits"></div>
+          <div class="form-group"><label>Confirm New PIN</label><input id="pin-confirm" type="password" maxlength="8" placeholder="Repeat new PIN"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="changePin()">Change PIN</button>
+          <button class="btn btn-outline" onclick="lockApp()">🔒 Lock App Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EmailJS Config -->
+    <div class="card mb-4" style="border-left:3px solid var(--gold)">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📧 Email Setup (EmailJS)</div>
+          <div class="card-subtitle">One-time setup — paste your EmailJS keys below to enable email sending</div>
+        </div>
+        <span class="badge ${configured?'badge-green':'badge-amber'}">${configured?'✓ Configured':'Not configured'}</span>
+      </div>
+      <div class="card-body">
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;font-size:12px;line-height:1.8;color:var(--text-2)">
+          <strong>3-step setup (free, takes 3 minutes):</strong><br>
+          1. Go to <a href="https://www.emailjs.com" target="_blank" style="color:var(--navy)">emailjs.com</a> → create a free account<br>
+          2. Add an <strong>Email Service</strong> (connect your Gmail/Outlook) → copy the <strong>Service ID</strong><br>
+          3. Create an <strong>Email Template</strong> — use variables: <code style="background:var(--surface-3);padding:1px 5px;border-radius:3px">{{to_name}}</code> <code style="background:var(--surface-3);padding:1px 5px;border-radius:3px">{{to_email}}</code> <code style="background:var(--surface-3);padding:1px 5px;border-radius:3px">{{message}}</code> <code style="background:var(--surface-3);padding:1px 5px;border-radius:3px">{{subject}}</code> → copy the <strong>Template ID</strong><br>
+          4. Go to Account → copy your <strong>Public Key</strong><br>
+          5. Paste all three below and click Save.
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="form-group"><label>Public Key</label><input id="ejs-key" placeholder="e.g. user_xxxxxxx" value="${ejs.publicKey||''}"></div>
+          <div class="form-group"><label>Service ID</label><input id="ejs-service" placeholder="e.g. service_xxxxxxx" value="${ejs.serviceId||''}"></div>
+          <div class="form-group"><label>Template ID (statement)</label><input id="ejs-template" placeholder="e.g. template_xxxxxxx" value="${ejs.templateStatement||''}"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px"><label>Cooperative sender name (shown in emails)</label>
+          <input id="ejs-sender" placeholder="Iremide Cooperative Multipurpose Union" value="${ejs.senderName||'Iremide Cooperative Multipurpose Union'}"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveEmailSettings()">Save Email Settings</button>
+          <button class="btn btn-outline" onclick="testEmail()" ${configured?'':'disabled style="opacity:0.5"'}>Send Test Email to yourself</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Split Ratios -->
+    <div class="card mb-4">
+      <div class="card-header"><div class="card-title">Contribution Split Ratios</div>
+      <div class="card-subtitle">Applied automatically when a contribution amount is entered</div></div>
+      <div class="card-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>Building Fund %</label>
+            <input type="number" id="s-building" value="${(data.settings.building*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
+          <div class="form-group"><label>Shares %</label>
+            <input type="number" id="s-shares" value="${(data.settings.shares*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
+          <div class="form-group"><label>Savings %</label>
+            <input type="number" id="s-savings" value="${(data.settings.savings*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
+          <div class="form-group"><label>Development Levy %</label>
+            <input type="number" id="s-levy" value="${(data.settings.levy*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
+        </div>
+        <div id="splitCheck" style="margin-top:10px;padding:10px;border-radius:var(--radius-sm);background:var(--green-light);color:var(--green);font-size:13px">
+          ✓ Total: 100% — amounts are balanced
+        </div>
+        <div class="form-group mt-3" style="margin-top:12px"><label>Standard contribution amount for preview (₦)</label>
+          <input type="number" id="s-std" value="2000" oninput="previewSplit()"></div>
+        <div class="split-preview" id="settingsSplitPreview" style="margin-top:10px">
+          <div class="split-item"><div class="split-item-label">Building</div><div class="split-item-val" id="ss-bld">₦100</div></div>
+          <div class="split-item"><div class="split-item-label">Shares</div><div class="split-item-val" id="ss-shr">₦1,000</div></div>
+          <div class="split-item"><div class="split-item-label">Savings</div><div class="split-item-val" id="ss-sav">₦800</div></div>
+          <div class="split-item"><div class="split-item-label">Dev Levy</div><div class="split-item-val" id="ss-lev">₦100</div></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Cluster List</div></div>
+      <div class="card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${CLUSTERS.map(c=>`<span class="badge badge-navy" style="font-size:12px;padding:5px 12px">${c}</span>`).join('')}
+        </div>
+        <p class="text-sm text-muted" style="margin-top:12px">To add or rename clusters, edit the CLUSTERS constant in the source.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== AFTER RENDER =====
+function afterRender(page) {
+  if (page === 'members' || page === 'contributions' || page === 'loans') {
+    populateMemberDropdowns();
+  }
+}
+
+function populateMemberDropdowns() {
+  ['c-card','l-card'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">Select member</option>' +
+      data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}</option>`).join('');
+  });
+  const mc = document.getElementById('m-cluster');
+  if (mc) mc.innerHTML = '<option value="">Select cluster</option>' + CLUSTERS.map(c=>`<option>${c}</option>`).join('');
+}
+
+// ===== MODALS =====
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window._editingCard = null;
+
+function openAddMember() {
+  window._editingCard = null;
+  document.getElementById('memberModalTitle').textContent = 'Add New Member';
+  ['m-card','m-name','m-phone','m-email'].forEach(id => document.getElementById(id).value = '');
+  ['m-shares','m-savings','m-building','m-deposit','m-loan','m-loanint'].forEach(id => document.getElementById(id).value = 0);
+  document.getElementById('m-status').value = 'Active';
+  document.getElementById('m-date').value = today();
+  const mc = document.getElementById('m-cluster');
+  mc.innerHTML = '<option value="">Select cluster</option>' + CLUSTERS.map(c=>`<option>${c}</option>`).join('');
+  openModal('addMemberModal');
+}
+
+function editMember(card) {
+  const m = memberByCard(card);
+  if (!m) return;
+  window._editingCard = card;
+  document.getElementById('memberModalTitle').textContent = 'Edit Member';
+  document.getElementById('m-card').value = m.card;
+  document.getElementById('m-name').value = m.name;
+  document.getElementById('m-phone').value = m.phone||'';
+  document.getElementById('m-email').value = m.email||'';
+  document.getElementById('m-date').value = m.dateAdm||'';
+  document.getElementById('m-status').value = m.status||'Active';
+  document.getElementById('m-shares').value = m.bfShares||0;
+  document.getElementById('m-savings').value = m.bfSavings||0;
+  document.getElementById('m-building').value = m.bfBuilding||0;
+  document.getElementById('m-deposit').value = m.bfDeposit||0;
+  document.getElementById('m-loan').value = m.bfLoan||0;
+  document.getElementById('m-loanint').value = m.bfLoanInt||0;
+  const mc = document.getElementById('m-cluster');
+  mc.innerHTML = '<option value="">Select cluster</option>' + CLUSTERS.map(c=>`<option ${c===m.cluster?'selected':''}>${c}</option>`).join('');
+  openModal('addMemberModal');
+}
+
+async function saveMember() {
+  const card = document.getElementById('m-card').value.trim();
+  const name = document.getElementById('m-name').value.trim();
+  const cluster = document.getElementById('m-cluster').value;
+  if (!card || !name || !cluster) { toast('Please fill in Card Number, Name, and Cluster'); return; }
+
+  const member = {
+    card, name, cluster,
+    dateAdm: document.getElementById('m-date').value,
+    phone: document.getElementById('m-phone').value,
+    email: document.getElementById('m-email').value,
+    status: document.getElementById('m-status').value,
+    bfShares: +document.getElementById('m-shares').value||0,
+    bfSavings: +document.getElementById('m-savings').value||0,
+    bfBuilding: +document.getElementById('m-building').value||0,
+    bfDeposit: +document.getElementById('m-deposit').value||0,
+    bfLoan: +document.getElementById('m-loan').value||0,
+    bfLoanInt: +document.getElementById('m-loanint').value||0
+  };
+
+  if (window._editingCard) {
+    const idx = data.members.findIndex(m => m.card === window._editingCard);
+    if (idx > -1) {
+      member.id = data.members[idx].id;
+      data.members[idx] = member;
+    }
+  } else {
+    if (data.members.find(m=>m.card===card)) { toast('Card number already exists'); return; }
+    data.members.push(member);
+  }
+  await fbSaveMember(member);
+  save();
+  closeModal('addMemberModal');
+  toast(window._editingCard ? 'Member updated' : 'Member added');
+  if (!db) render(currentPage);
+}
+
+function openAddContrib() {
+  document.getElementById('c-date').value = today();
+  document.getElementById('c-card').innerHTML = '<option value="">Select member</option>' +
+    data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}</option>`).join('');
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-cluster').value = '';
+  document.getElementById('c-amount').value = '';
+  document.getElementById('c-remarks').value = '';
+  ['sp-building','sp-shares','sp-savings','sp-levy'].forEach(id=>document.getElementById(id).textContent='₦0');
+  openModal('addContribModal');
+}
+
+function fillContribMember() {
+  const card = document.getElementById('c-card').value;
+  const m = memberByCard(card);
+  document.getElementById('c-name').value = m ? m.name : '';
+  document.getElementById('c-cluster').value = m ? m.cluster : '';
+  calcSplit();
+}
+
+function calcSplit() {
+  const amt = +document.getElementById('c-amount').value || 0;
+  const s = data.settings;
+  document.getElementById('sp-building').textContent = fmt(amt * s.building);
+  document.getElementById('sp-shares').textContent = fmt(amt * s.shares);
+  document.getElementById('sp-savings').textContent = fmt(amt * s.savings);
+  document.getElementById('sp-levy').textContent = fmt(amt * s.levy);
+}
+
+async function saveContribution() {
+  const card = document.getElementById('c-card').value;
+  const amount = +document.getElementById('c-amount').value;
+  const date = document.getElementById('c-date').value;
+  if (!card || !amount || !date) { toast('Please fill in date, member, and amount'); return; }
+  const m = memberByCard(card);
+  const s = data.settings;
+  const contrib = {
+    id: null,
+    date, card, memberName: m.name, cluster: m.cluster,
+    amount, building: amount*s.building, shares: amount*s.shares,
+    savings: amount*s.savings, levy: amount*s.levy,
+    remarks: document.getElementById('c-remarks').value,
+    voided: false
+  };
+  data.contributions.unshift(contrib);
+  await fbSaveContrib(contrib);
+  save();
+  closeModal('addContribModal');
+  toast('Contribution saved');
+  if (!db) render(currentPage);
+}
+
+function openAddLoan() {
+  document.getElementById('l-date').value = today();
+  document.getElementById('l-card').innerHTML = '<option value="">Select member</option>' +
+    data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}</option>`).join('');
+  ['l-name','l-cluster'].forEach(id=>document.getElementById(id).value='');
+  ['l-disb','l-rep','l-intc','l-intp'].forEach(id=>document.getElementById(id).value=0);
+  document.getElementById('l-remarks').value = '';
+  openModal('addLoanModal');
+}
+
+function fillLoanMember() {
+  const card = document.getElementById('l-card').value;
+  const m = memberByCard(card);
+  document.getElementById('l-name').value = m ? m.name : '';
+  document.getElementById('l-cluster').value = m ? m.cluster : '';
+}
+
+async function saveLoan() {
+  const card = document.getElementById('l-card').value;
+  const date = document.getElementById('l-date').value;
+  if (!card || !date) { toast('Please fill in date and member'); return; }
+  const m = memberByCard(card);
+  const loan = {
+    id: null,
+    date, card, memberName: m.name, cluster: m.cluster,
+    type: document.getElementById('l-type').value,
+    disb: +document.getElementById('l-disb').value||0,
+    rep: +document.getElementById('l-rep').value||0,
+    intCharged: +document.getElementById('l-intc').value||0,
+    intPaid: +document.getElementById('l-intp').value||0,
+    remarks: document.getElementById('l-remarks').value,
+    voided: false
+  };
+  data.loans.unshift(loan);
+  await fbSaveLoan(loan);
+  save();
+  closeModal('addLoanModal');
+  toast('Loan transaction saved');
+  if (!db) render(currentPage);
+}
+
+function openAddExpense() {
+  document.getElementById('e-date').value = today();
+  ['e-desc','e-paidto','e-remarks'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('e-amount').value = '';
+  openModal('addExpenseModal');
+}
+
+async function saveExpense() {
+  const desc = document.getElementById('e-desc').value.trim();
+  const amount = +document.getElementById('e-amount').value;
+  const date = document.getElementById('e-date').value;
+  if (!desc || !amount || !date) { toast('Please fill in date, description, and amount'); return; }
+  const expense = {
+    id: null,
+    date, desc, amount,
+    paidTo: document.getElementById('e-paidto').value,
+    remarks: document.getElementById('e-remarks').value,
+    voided: false
+  };
+  data.expenses.unshift(expense);
+  await fbSaveExpense(expense);
+  save();
+  closeModal('addExpenseModal');
+  toast('Expense saved');
+  if (!db) render(currentPage);
+}
+
+// ===== CLUSTER MEETING =====
+function selectMeetingCluster(cl) {
+  window._meetingCluster = cl;
+  render('cluster-meeting');
+}
+
+function autoSplit(input, idx) {
+  const amt = +input.value || 0;
+  const s = data.settings;
+  const bld = document.getElementById(`mr-bld-${idx}`);
+  const shr = document.getElementById(`mr-shr-${idx}`);
+  const sav = document.getElementById(`mr-sav-${idx}`);
+  const lev = document.getElementById(`mr-lev-${idx}`);
+  if (bld) bld.value = (amt * s.building).toFixed(2);
+  if (shr) shr.value = (amt * s.shares).toFixed(2);
+  if (sav) sav.value = (amt * s.savings).toFixed(2);
+  if (lev) lev.value = (amt * s.levy).toFixed(2);
+}
+
+async function saveMeetingContribs() {
+  const date = document.getElementById('meetingDate').value;
+  const cl = window._meetingCluster || CLUSTERS[0];
+  const members = data.members.filter(m => m.cluster === cl);
+  const s = data.settings;
+  let saved = 0;
+  const contribs = [], loans = [];
+  members.forEach((m) => {
+    const amtEl = document.querySelector(`[data-card="${m.card}"][data-field="amount"]`);
+    const repEl = document.querySelector(`[data-card="${m.card}"][data-field="loanrep"]`);
+    const remEl = document.querySelector(`[data-card="${m.card}"][data-field="remarks"]`);
+    const amt = amtEl ? +amtEl.value : 0;
+    const rep = repEl ? +repEl.value : 0;
+    if (amt > 0) {
+      const c = { id:null, date, card: m.card, memberName: m.name, cluster: m.cluster,
+        amount: amt, building: amt*s.building, shares: amt*s.shares,
+        savings: amt*s.savings, levy: amt*s.levy,
+        remarks: remEl ? remEl.value : '', voided: false };
+      contribs.push(c);
+      data.contributions.unshift(c);
+      saved++;
+    }
+    if (rep > 0) {
+      const l = { id:null, date, card: m.card, memberName: m.name, cluster: m.cluster,
+        type: 'Repayment', disb: 0, rep, intCharged: 0, intPaid: 0, remarks: '', voided: false };
+      loans.push(l);
+      data.loans.unshift(l);
+    }
+  });
+  if (saved === 0) { toast('No amounts entered — nothing saved'); return; }
+  if (db) {
+    await Promise.all([
+      ...contribs.map(c => fbSaveContrib(c)),
+      ...loans.map(l => fbSaveLoan(l))
+    ]);
+  } else { save(); }
+  toast(`Saved ${saved} contribution${saved>1?'s':''} for ${cl}`);
+  if (!db) render('cluster-meeting');
+}
+
+// ===== LEDGER =====
+function selectLedger(card) {
+  window._ledgerCard = card;
+  render('ledger');
+}
+
+function filterLedgerByCluster(cluster) {
+  const members = cluster ? data.members.filter(m=>m.cluster===cluster) : data.members;
+  const selects = document.querySelectorAll('[onchange*="selectLedger"]');
+  selects.forEach(sel => {
+    sel.innerHTML = '<option value="">— Select a member —</option>' +
+      members.map(m=>`<option value="${m.card}" ${m.card===window._ledgerCard?'selected':''}>${m.card} – ${m.name}</option>`).join('');
+  });
+}
+
+function viewLedger(card) {
+  window._ledgerCard = card;
+  navigate('ledger');
+}
+
+// ===== SETTINGS =====
+function previewSplit() {
+  const bld = +document.getElementById('s-building').value/100;
+  const shr = +document.getElementById('s-shares').value/100;
+  const sav = +document.getElementById('s-savings').value/100;
+  const lev = +document.getElementById('s-levy').value/100;
+  const std = +document.getElementById('s-std').value||2000;
+  const total = bld+shr+sav+lev;
+  const chk = document.getElementById('splitCheck');
+  if (Math.abs(total-1) < 0.001) {
+    chk.style.background='var(--green-light)'; chk.style.color='var(--green)';
+    chk.textContent = `✓ Total: ${(total*100).toFixed(1)}% — amounts are balanced`;
+  } else {
+    chk.style.background='var(--red-light)'; chk.style.color='var(--red)';
+    chk.textContent = `⚠ Total: ${(total*100).toFixed(1)}% — must equal 100%`;
+  }
+  document.getElementById('ss-bld').textContent = fmt(std*bld);
+  document.getElementById('ss-shr').textContent = fmt(std*shr);
+  document.getElementById('ss-sav').textContent = fmt(std*sav);
+  document.getElementById('ss-lev').textContent = fmt(std*lev);
+}
+
+async function saveSettings() {
+  const bld = +document.getElementById('s-building').value/100;
+  const shr = +document.getElementById('s-shares').value/100;
+  const sav = +document.getElementById('s-savings').value/100;
+  const lev = +document.getElementById('s-levy').value/100;
+  if (Math.abs(bld+shr+sav+lev-1) > 0.001) { toast('Percentages must total 100%'); return; }
+  data.settings = { building: bld, shares: shr, savings: sav, levy: lev };
+  await fbSaveSettings();
+  save();
+  toast('Settings saved');
+}
+
+// ===== GLOBAL SEARCH =====
+function globalSearchFn(val) {
+  if (!val) return;
+  const match = data.members.find(m => m.name.toLowerCase().includes(val.toLowerCase()) || m.card.includes(val));
+  if (match) { window._ledgerCard = match.card; navigate('ledger'); }
+}
+
+// ===== EXPORT =====
+function exportData() {
+  const page = currentPage;
+  let csv = '';
+  if (page === 'members') {
+    csv = 'Card,Name,Cluster,Phone,Email,Status,Shares,Savings,Building,Deposit,Loan\n';
+    data.members.forEach(m => {
+      const f = calcMemberFunds(m.card);
+      csv += `"${m.card}","${m.name}","${m.cluster}","${m.phone||''}","${m.email||''}","${m.status}",${f.shares},${f.savings},${f.building},${f.deposit},${f.loan}\n`;
+    });
+  } else if (page === 'contributions') {
+    csv = 'Date,Card,Member,Cluster,Total,Building,Shares,Savings,DevLevy\n';
+    data.contributions.forEach(c => {
+      csv += `"${c.date}","${c.card}","${c.memberName}","${c.cluster}",${c.amount},${c.building},${c.shares},${c.savings},${c.levy}\n`;
+    });
+  } else if (page === 'loans') {
+    csv = 'Date,Card,Member,Cluster,Type,Disbursed,Repaid,IntCharged,IntPaid\n';
+    data.loans.forEach(l => {
+      csv += `"${l.date}","${l.card}","${l.memberName}","${l.cluster}","${l.type}",${l.disb||0},${l.rep||0},${l.intCharged||0},${l.intPaid||0}\n`;
+    });
+  } else if (page === 'cluster-summary') {
+    csv = 'Cluster,Members,Shares,Savings,Building,Deposit,Loans,LoanInterest,TotalCollected\n';
+    CLUSTERS.forEach(cl => {
+      const t = totalsByCluster(cl);
+      csv += `"${cl}",${t.count},${t.shares},${t.savings},${t.building},${t.deposit},${t.loan},${t.loanInt},${t.totalPaid}\n`;
+    });
+  } else {
+    toast('Switch to Members, Contributions, Loans, or Cluster Summary to export that data');
+    return;
+  }
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `iremide_${page}_${today()}.csv`;
+  a.click();
+  toast('CSV downloaded');
+}
+
+// ===== EMAIL PAGE =====
+function renderEmail() {
+  const ejs = data.emailjs || {};
+  const configured = !!(ejs.publicKey && ejs.serviceId && ejs.templateStatement);
+  const withEmail = data.members.filter(m => m.email);
+  const noEmail = data.members.filter(m => !m.email);
+
+  return `
+  ${!configured ? `<div style="background:var(--amber-light);border:1px solid #e8c96a;border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-weight:600;font-size:13px;color:var(--amber)">⚠ EmailJS not configured yet</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:3px">Go to Settings to paste your EmailJS keys. It takes 3 minutes and emails are then sent with one click.</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="navigate('settings')">Go to Settings →</button>
+  </div>` : `<div style="background:var(--green-light);border:1px solid #a0d9b8;border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;font-size:13px;color:var(--green)">
+    ✓ EmailJS configured — emails send directly from this app. ${withEmail.length} of ${data.members.length} members have email addresses on file.
+  </div>`}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- Individual statement -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Account Statement</div><div class="card-subtitle">Send a member their current balances</div></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:var(--navy)"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="form-group mb-3">
+          <label>Select Member</label>
+          <select id="email-member-card" onchange="previewStatement()" style="width:100%">
+            <option value="">— choose member —</option>
+            ${data.members.map(m=>`<option value="${m.card}" ${m.email?'':'style="color:var(--text-3)"'}>${m.card} – ${m.name}${m.email?'':' (no email)'}</option>`).join('')}
+          </select>
+        </div>
+        <div id="statement-preview" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text-2);min-height:80px;margin-bottom:12px">
+          Select a member to preview their statement
+        </div>
+        <button class="btn btn-primary w-full" onclick="sendStatementEmail()" ${configured?'':'disabled style="opacity:0.5"'}>
+          ✉ Send Account Statement
+        </button>
+      </div>
+    </div>
+
+    <!-- Broadcast -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Broadcast Message</div><div class="card-subtitle">Send an announcement to a cluster or all members</div></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:var(--navy)"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="form-group mb-3">
+          <label>Send To</label>
+          <select id="broadcast-target" style="width:100%">
+            <option value="all">All Members (${withEmail.length} with email)</option>
+            ${CLUSTERS.map(cl=>{
+              const count = data.members.filter(m=>m.cluster===cl&&m.email).length;
+              return `<option value="${cl}">${cl} (${count} with email)</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="form-group mb-3"><label>Subject</label><input id="broadcast-subject" placeholder="Meeting reminder, Important notice..." style="width:100%"></div>
+        <div class="form-group mb-3"><label>Message</label><textarea id="broadcast-body" placeholder="Dear member, ..." style="width:100%;min-height:90px"></textarea></div>
+        <button class="btn btn-primary w-full" onclick="sendBroadcast()" ${configured?'':'disabled style="opacity:0.5"'}>
+          ✉ Send Broadcast
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Members without email -->
+  ${noEmail.length ? `<div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Members without email addresses (${noEmail.length})</div>
+      <div class="card-subtitle">Add email addresses in the Members page to reach these members</div></div>
+    </div>
+    <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px">
+      ${noEmail.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+        <div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(m.name)}</div>
+        <div><div style="font-weight:500">${m.name}</div><div style="color:var(--text-3)">${m.card} · ${m.cluster}</div></div>
+        <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')" style="font-size:11px;padding:3px 8px">+ Email</button>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <!-- Email log -->
+  ${data.emailLog && data.emailLog.length ? `<div class="card" style="margin-top:16px">
+    <div class="card-header"><div class="card-title">Email Log (last ${Math.min(data.emailLog.length,20)})</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sent</th><th>Type</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
+        <tbody>${[...data.emailLog].reverse().slice(0,20).map(l=>`<tr>
+          <td class="text-sm">${l.time}</td>
+          <td><span class="badge badge-navy" style="font-size:10px">${l.type}</span></td>
+          <td class="text-sm">${l.to}</td>
+          <td class="text-sm">${l.subject}</td>
+          <td><span class="badge ${l.ok?'badge-green':'badge-red'}">${l.ok?'Sent':'Failed'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>` : ''}`;
+}
+
+// ===== EMAILJS FUNCTIONS =====
+function ejsReady() {
+  const ejs = data.emailjs || {};
+  if (!ejs.publicKey || !ejs.serviceId || !ejs.templateStatement) {
+    toast('⚠ EmailJS not configured. Go to Settings first.'); return false;
+  }
+  try { emailjs.init(ejs.publicKey); } catch(e){}
+  return true;
+}
+
+function buildStatementMessage(card) {
+  const m = memberByCard(card);
+  if (!m) return '';
+  const f = calcMemberFunds(card);
+  const lastContrib = [...memberContribs(card)].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const sender = (data.emailjs||{}).senderName || 'Iremide Cooperative Multipurpose Union';
+  return `Dear ${m.name},
+
+Please find below your account statement with ${sender}.
+
+ACCOUNT SUMMARY
+───────────────────────────
+Card Number:    ${m.card}
+Cluster:        ${m.cluster}
+
+FUND BALANCES
+───────────────────────────
+Shares:         ₦${fmtN(f.shares)}
+Savings:        ₦${fmtN(f.savings)}
+Building Fund:  ₦${fmtN(f.building)}
+Deposits:       ₦${fmtN(f.deposit)}
+
+LOAN POSITION
+───────────────────────────
+Loan Balance:   ₦${fmtN(f.loan)}
+Loan Interest:  ₦${fmtN(f.loanInt)}
+
+CONTRIBUTIONS
+───────────────────────────
+Total Paid:     ₦${fmtN(f.totalPaid)}
+${lastContrib ? `Last Payment:   ₦${fmtN(lastContrib.amount)} on ${lastContrib.date}` : ''}
+
+This statement was generated on ${new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'})}.
+
+For enquiries, please contact your cluster leader or the cooperative secretary.
+
+Warm regards,
+${sender}`;
+}
+
+function previewStatement() {
+  const card = document.getElementById('email-member-card')?.value;
+  const preview = document.getElementById('statement-preview');
+  if (!preview) return;
+  if (!card) { preview.textContent = 'Select a member to preview their statement'; return; }
+  const m = memberByCard(card);
+  if (!m) return;
+  const f = calcMemberFunds(card);
+  preview.innerHTML = `
+    <div style="font-weight:600;margin-bottom:6px">To: ${m.email || '<span style="color:var(--red)">No email on file</span>'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px">
+      <div>Shares: <strong>${fmt(f.shares)}</strong></div>
+      <div>Savings: <strong>${fmt(f.savings)}</strong></div>
+      <div>Building: <strong>${fmt(f.building)}</strong></div>
+      <div>Loan Bal: <strong style="color:var(--red)">${fmt(f.loan)}</strong></div>
+    </div>`;
+}
+
+async function sendStatementEmail(card) {
+  if (!ejsReady()) return;
+  const resolvedCard = card || document.getElementById('email-member-card')?.value;
+  if (!resolvedCard) { toast('Please select a member'); return; }
+  const m = memberByCard(resolvedCard);
+  if (!m) return;
+  if (!m.email) { toast(`${m.name} has no email address on file`); return; }
+  const ejs = data.emailjs;
+  const sender = ejs.senderName || 'Iremide Cooperative';
+  toast(`Sending to ${m.name}...`);
+  try {
+    await emailjs.send(ejs.serviceId, ejs.templateStatement, {
+      to_name: m.name,
+      to_email: m.email,
+      subject: `Your Account Statement — ${sender}`,
+      message: buildStatementMessage(resolvedCard)
+    });
+    logEmail('Statement', m.email, `Account Statement — ${sender}`, true);
+    toast(`✓ Statement sent to ${m.name} (${m.email})`);
+  } catch(e) {
+    logEmail('Statement', m.email, `Account Statement — ${sender}`, false);
+    toast(`✗ Failed to send: ${e.text || e.message || 'Unknown error'}`);
+  }
+}
+
+async function sendBroadcast() {
+  if (!ejsReady()) return;
+  const target = document.getElementById('broadcast-target')?.value;
+  const subject = document.getElementById('broadcast-subject')?.value?.trim();
+  const body = document.getElementById('broadcast-body')?.value?.trim();
+  if (!subject || !body) { toast('Please enter a subject and message'); return; }
+  const ejs = data.emailjs;
+  let recipients = data.members.filter(m => m.email);
+  if (target && target !== 'all') recipients = recipients.filter(m => m.cluster === target);
+  if (!recipients.length) { toast('No members with email addresses in this selection'); return; }
+  toast(`Sending to ${recipients.length} members...`);
+  let sent = 0, failed = 0;
+  for (const m of recipients) {
+    try {
+      await emailjs.send(ejs.serviceId, ejs.templateStatement, {
+        to_name: m.name, to_email: m.email, subject, message: body
+      });
+      logEmail('Broadcast', m.email, subject, true);
+      sent++;
+    } catch(e) {
+      logEmail('Broadcast', m.email, subject, false);
+      failed++;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  save();
+  toast(`✓ Sent ${sent}${failed?`, ${failed} failed`:''}`);
+  render('email');
+}
+
+async function emailClusterReceipts() {
+  if (!ejsReady()) return;
+  const cl = window._meetingCluster || CLUSTERS[0];
+  const date = document.getElementById('meetingDate')?.value || today();
+  const ejs = data.emailjs;
+  const members = data.members.filter(m => m.cluster === cl && m.email);
+  if (!members.length) { toast('No members in this cluster have email addresses'); return; }
+  toast(`Sending receipts to ${members.length} members...`);
+  let sent = 0;
+  for (const m of members) {
+    try {
+      await emailjs.send(ejs.serviceId, ejs.templateStatement, {
+        to_name: m.name, to_email: m.email,
+        subject: `Contribution Receipt — ${date}`,
+        message: buildStatementMessage(m.card)
+      });
+      logEmail('Receipt', m.email, `Contribution Receipt — ${date}`, true);
+      sent++;
+    } catch(e) { }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  save();
+  toast(`✓ Receipts sent to ${sent} members`);
+}
+
+async function testEmail() {
+  if (!ejsReady()) return;
+  const ejs = data.emailjs;
+  toast('Sending test email...');
+  try {
+    await emailjs.send(ejs.serviceId, ejs.templateStatement, {
+      to_name: 'Admin', to_email: '',
+      subject: 'Test — Iremide Cooperative Email System',
+      message: 'This is a test email from the Iremide Cooperative Management System. Email is configured correctly!'
+    });
+    toast('✓ Test email sent! Check your inbox.');
+  } catch(e) {
+    toast(`✗ Test failed: ${e.text || e.message || 'Check your EmailJS keys'}`);
+  }
+}
+
+function logEmail(type, to, subject, ok) {
+  if (!data.emailLog) data.emailLog = [];
+  data.emailLog.push({ time: new Date().toLocaleString('en-GB'), type, to, subject, ok });
+  if (data.emailLog.length > 100) data.emailLog = data.emailLog.slice(-100);
+}
+
+function emailMemberStatement(card) {
+  window._ledgerCard = card;
+  navigate('email');
+  setTimeout(() => {
+    const sel = document.getElementById('email-member-card');
+    if (sel) { sel.value = card; previewStatement(); }
+  }, 100);
+}
+
+async function saveEmailSettings() {
+  data.emailjs = {
+    publicKey: document.getElementById('ejs-key')?.value?.trim(),
+    serviceId: document.getElementById('ejs-service')?.value?.trim(),
+    templateStatement: document.getElementById('ejs-template')?.value?.trim(),
+    senderName: document.getElementById('ejs-sender')?.value?.trim() || 'Iremide Cooperative Multipurpose Union'
+  };
+  await fbSaveSettings();
+  save();
+  toast('Email settings saved');
+  render('settings');
+}
+
+// ===== PIN LOGIN =====
+let _pinEntry = '';
+const DEFAULT_PIN = '1234';
+
+function getPin() { return localStorage.getItem('iremide_pin') || DEFAULT_PIN; }
+
+function pinKey(digit) {
+  if (_pinEntry.length >= 8) return;
+  _pinEntry += digit;
+  updatePinDots();
+  if (_pinEntry.length === 4 || _pinEntry.length === getPin().length) {
+    setTimeout(checkPin, 150);
+  }
+}
+
+function pinBack() {
+  _pinEntry = _pinEntry.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function pinClear() {
+  _pinEntry = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    if (dot) dot.classList.toggle('filled', i < _pinEntry.length);
+  }
+}
+
+function checkPin() {
+  if (_pinEntry === getPin()) {
+    document.getElementById('pinOverlay').style.display = 'none';
+    document.getElementById('pinError').textContent = '';
+    _pinEntry = '';
+    updatePinDots();
+    sessionStorage.setItem('iremide_unlocked', '1');
+  } else {
+    document.getElementById('pinError').textContent = 'Incorrect PIN — try again';
+    _pinEntry = '';
+    updatePinDots();
+    const box = document.querySelector('.pin-box');
+    box.style.transform = 'translateX(8px)';
+    setTimeout(() => { box.style.transform = 'translateX(-8px)'; }, 80);
+    setTimeout(() => { box.style.transform = ''; }, 160);
+  }
+}
+
+function changePin() {
+  const current = document.getElementById('pin-current')?.value;
+  const newPin = document.getElementById('pin-new')?.value;
+  const confirm = document.getElementById('pin-confirm')?.value;
+  if (current !== getPin()) { toast('Current PIN is incorrect'); return; }
+  if (!newPin || newPin.length < 4) { toast('New PIN must be at least 4 digits'); return; }
+  if (newPin !== confirm) { toast('New PINs do not match'); return; }
+  if (!/^\d+$/.test(newPin)) { toast('PIN must contain digits only'); return; }
+  localStorage.setItem('iremide_pin', newPin);
+  toast('✓ PIN changed successfully');
+  ['pin-current','pin-new','pin-confirm'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+function lockApp() {
+  sessionStorage.removeItem('iremide_unlocked');
+  _pinEntry = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('pinHint').textContent = 'Default PIN: 1234 · Change in Settings';
+  document.getElementById('pinOverlay').style.display = 'flex';
+}
+
+function initPin() {
+  if (sessionStorage.getItem('iremide_unlocked') === '1') {
+    document.getElementById('pinOverlay').style.display = 'none';
+  }
+}
+
+// ===== VOID & DELETE RECORDS =====
+async function voidRecord(type, idx) {
+  const rec = data[type][idx];
+  if (!rec) return;
+  if (!confirm(`Void this ${type.slice(0,-1)} entry?\n\nDate: ${rec.date}\nAmount: ${fmt(rec.amount||rec.disb||rec.rep||0)}\n\nThe entry will remain visible but struck-through and excluded from all totals.`)) return;
+  data[type][idx].voided = true;
+  if (db && rec.id) { await fbVoidRecord(type, rec.id, true); } else { save(); }
+  toast(`Entry voided — excluded from all calculations`);
+  if (!db) render(currentPage);
+}
+
+async function deleteRecord(type, idx) {
+  const rec = data[type][idx];
+  if (!rec) return;
+  if (!confirm(`Permanently delete this voided entry?\n\nThis cannot be undone. Make sure you have a backup first.`)) return;
+  const docId = rec.id;
+  data[type].splice(idx, 1);
+  if (db && docId) { await fbDeleteRecord(type, docId); } else { save(); }
+  toast(`Entry permanently deleted`);
+  if (!db) render(currentPage);
+}
+
+// ===== BACKUP & RESTORE =====
+function backupData() {
+  const backup = {
+    _meta: {
+      app: 'Iremide Cooperative Management System',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      exportedAtReadable: new Date().toLocaleString('en-GB'),
+      memberCount: data.members.length,
+      contributionCount: data.contributions.length,
+      loanCount: data.loans.length,
+      expenseCount: data.expenses.length,
+    },
+    ...data
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  const dateStr = today().replace(/-/g,'');
+  a.href = URL.createObjectURL(blob);
+  a.download = `iremide_backup_${dateStr}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // record backup time
+  const now = new Date().toLocaleString('en-GB');
+  localStorage.setItem('iremide_lastBackup', now);
+  updateBackupStatus();
+  toast(`✓ Backup downloaded — ${data.members.length} members, ${data.contributions.length} contributions`);
+}
+
+function updateBackupStatus() {
+  const el = document.getElementById('lastBackupTime');
+  if (!el) return;
+  const t = localStorage.getItem('iremide_lastBackup');
+  el.textContent = t || 'Never';
+  el.style.color = t ? 'rgba(144,238,144,0.7)' : '#e87676';
+}
+
+let _pendingRestoreData = null;
+
+function restoreData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.members || !Array.isArray(parsed.members)) {
+        toast('✗ Invalid backup file — not a valid Iremide backup'); return;
+      }
+      _pendingRestoreData = parsed;
+      const meta = parsed._meta || {};
+      const info = document.getElementById('restoreFileInfo');
+      if (info) {
+        info.innerHTML = `
+          <div style="font-weight:600;margin-bottom:6px">Backup file contents:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;color:var(--text-2)">
+            <div>Backed up:</div><div><strong>${meta.exportedAtReadable || 'Unknown'}</strong></div>
+            <div>Members:</div><div><strong>${parsed.members.length}</strong></div>
+            <div>Contributions:</div><div><strong>${(parsed.contributions||[]).length}</strong></div>
+            <div>Loans:</div><div><strong>${(parsed.loans||[]).length}</strong></div>
+            <div>Expenses:</div><div><strong>${(parsed.expenses||[]).length}</strong></div>
+          </div>`;
+      }
+      openModal('restoreConfirmModal');
+    } catch(err) {
+      toast('✗ Could not read file — make sure it is a valid .json backup');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmRestore() {
+  if (!_pendingRestoreData) return;
+  const { _meta, ...restored } = _pendingRestoreData;
+  Object.assign(data, restored);
+  save();
+  _pendingRestoreData = null;
+  closeModal('restoreConfirmModal');
+  updateBackupStatus();
+  toast(`✓ Restored — ${data.members.length} members loaded`);
+  navigate('dashboard');
+}
+
+function cancelRestore() {
+  _pendingRestoreData = null;
+  closeModal('restoreConfirmModal');
+}
+
+function checkBackupReminder() {
+  const last = localStorage.getItem('iremide_lastBackup');
+  if (!last) return;
+  const lastDate = new Date(last.split(',')[0].split('/').reverse().join('-'));
+  const daysSince = Math.floor((Date.now() - lastDate) / 86400000);
+  if (daysSince >= 7) {
+    setTimeout(() => {
+      toast(`⚠ Last backup was ${daysSince} days ago — click Backup Now`);
+    }, 2000);
+  }
+}
+
+// ===== TOAST =====
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// Keyboard support for PIN
+document.addEventListener('keydown', e => {
+  const overlay = document.getElementById('pinOverlay');
+  if (!overlay || overlay.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+  else if (e.key === 'Backspace') pinBack();
+  else if (e.key === 'Escape') pinClear();
+});
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// Init — called by dynamic script loader after Firebase SDK loads
+async function appInit() {
+  initPin();
+  setLoadProgress(5, 'Starting up…');
+  await initFirebase();
+  navigate('dashboard');
+  updateBackupStatus();
+  checkBackupReminder();
+  if (_fbConnected) {
+    const badge = document.getElementById('fbStatusBadge');
+    if (badge) { badge.textContent = '✓ Connected'; badge.style.background='var(--green-light)'; badge.style.color='var(--green)'; }
+  }
+}
+// NOTE: appInit() is called by the dynamic loader below, not here
+</script>
+<!-- External scripts loaded after page renders for speed -->
+<script>
+function loadScript(src, cb) {
+  const s = document.createElement('script');
+  s.src = src; s.onload = cb; s.onerror = () => cb && cb(new Error('failed: '+src));
+  document.head.appendChild(s);
+}
+// Load Firebase then EmailJS in parallel after DOM ready
+window.addEventListener('load', () => {
+  loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js', () => {
+    loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js', () => {
+      loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js', () => {});
+      appInit();
+    });
+  });
+});
+</script>
+</body>
+</html>
