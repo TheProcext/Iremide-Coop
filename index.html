@@ -1371,23 +1371,101 @@ function filterContribs() {
 }
 
 function renderLoans() {
-  const totalDisb = data.loans.reduce((s,l)=>s+(l.disb||0),0);
-  const totalRep = data.loans.reduce((s,l)=>s+(l.rep||0),0);
-  const totalIntC = data.loans.reduce((s,l)=>s+(l.intCharged||0),0);
-  const totalIntP = data.loans.reduce((s,l)=>s+(l.intPaid||0),0);
+  const totalDisb = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.disb||0),0);
+  const totalRep = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.rep||0),0);
+  const totalIntC = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.intCharged||0),0);
+  const totalIntP = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.intPaid||0),0);
+  const outstanding = totalDisb - totalRep;
+  const repRate = totalDisb > 0 ? ((totalRep/totalDisb)*100).toFixed(1) : '0.0';
+
+  // Per-member loan summary
+  const memberLoanSummary = data.members.map(m => {
+    const ml = data.loans.filter(l => l.card === m.card && !l.voided);
+    const disb = ml.reduce((s,l)=>s+(l.disb||0),0);
+    const rep = ml.reduce((s,l)=>s+(l.rep||0),0);
+    const intC = ml.reduce((s,l)=>s+(l.intCharged||0),0);
+    const intP = ml.reduce((s,l)=>s+(l.intPaid||0),0);
+    const bal = (m.bfLoan||0) + disb - rep;
+    const intBal = (m.bfLoanInt||0) + intC - intP;
+    return { ...m, disb, rep, intC, intP, bal, intBal, txns: ml.length };
+  }).filter(m => m.disb > 0 || m.bal > 0 || m.txns > 0);
+
   return `
-  <div class="metrics-grid">
-    <div class="metric-card navy"><div class="metric-label">Total Disbursed</div><div class="metric-value">${fmt(totalDisb)}</div></div>
-    <div class="metric-card green"><div class="metric-label">Total Repaid</div><div class="metric-value">${fmt(totalRep)}</div></div>
-    <div class="metric-card red"><div class="metric-label">Loans Outstanding</div><div class="metric-value">${fmt(totalDisb-totalRep)}</div></div>
-    <div class="metric-card"><div class="metric-label">Interest Charged</div><div class="metric-value">${fmt(totalIntC)}</div></div>
-    <div class="metric-card gold"><div class="metric-label">Interest Paid</div><div class="metric-value">${fmt(totalIntP)}</div></div>
-    <div class="metric-card"><div class="metric-label">Interest Outstanding</div><div class="metric-value">${fmt(totalIntC-totalIntP)}</div></div>
-    <div class="metric-card"><div class="metric-label">Repayment Rate</div><div class="metric-value">${totalDisb>0?((totalRep/totalDisb)*100).toFixed(1)+'%':'—'}</div><div class="metric-sub">of total disbursed</div></div>
+  <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="metric-card navy"><div class="metric-label">Total Disbursed</div><div class="metric-value">${fmt(totalDisb)}</div><div class="metric-sub">All loans ever given</div></div>
+    <div class="metric-card green"><div class="metric-label">Total Repaid</div><div class="metric-value">${fmt(totalRep)}</div><div class="metric-sub">All repayments received</div></div>
+    <div class="metric-card red"><div class="metric-label">Outstanding Balance</div><div class="metric-value">${fmt(outstanding)}</div><div class="metric-sub">Still owed by members</div></div>
+    <div class="metric-card gold"><div class="metric-label">Repayment Rate</div><div class="metric-value">${repRate}%</div><div class="metric-sub">${fmt(totalRep)} of ${fmt(totalDisb)}</div></div>
   </div>
+  <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="metric-card"><div class="metric-label">Interest Charged</div><div class="metric-value">${fmt(totalIntC)}</div></div>
+    <div class="metric-card"><div class="metric-label">Interest Paid</div><div class="metric-value">${fmt(totalIntP)}</div></div>
+    <div class="metric-card"><div class="metric-label">Interest Outstanding</div><div class="metric-value">${fmt(totalIntC-totalIntP)}</div></div>
+  </div>
+
+  <!-- Per-member loan summary -->
+  ${memberLoanSummary.length ? `
   <div class="section-header">
-    <div class="section-title">Loan Transactions (${data.loans.length})</div>
-    <button class="btn btn-primary btn-sm" onclick="openAddLoan()">+ Record Loan Transaction</button>
+    <div class="section-title">Member Loan Summary</div>
+  </div>
+  <div class="card mb-4">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Card</th><th>Member</th><th>Cluster</th>
+          <th class="td-num">Total Disbursed</th>
+          <th class="td-num">Total Repaid</th>
+          <th class="td-num">Outstanding Balance</th>
+          <th class="td-num">Int Outstanding</th>
+          <th>Txns</th><th>Action</th>
+        </tr></thead>
+        <tbody>
+          ${memberLoanSummary.map(m=>`<tr>
+            <td><span class="mono" style="font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:4px">${m.card}</span></td>
+            <td class="td-name">${m.name}</td>
+            <td><span class="badge badge-navy" style="font-size:10px">${m.cluster}</span></td>
+            <td class="td-num text-red">${fmt(m.disb)}</td>
+            <td class="td-num text-green">${fmt(m.rep)}</td>
+            <td class="td-num" style="font-weight:700;color:${m.bal>0?'var(--red)':m.bal<0?'var(--amber)':'var(--green)'}">
+              ${fmt(m.bal)}
+              ${m.bal<=0&&m.disb>0?'<span style="font-size:10px;color:var(--green);display:block">✓ Fully repaid</span>':''}
+            </td>
+            <td class="td-num">${m.intBal>0?fmt(m.intBal):'—'}</td>
+            <td style="text-align:center"><span class="badge badge-navy">${m.txns}</span></td>
+            <td><button class="btn btn-outline btn-sm" onclick="viewLedger('${m.card}')">View Ledger</button></td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--navy)">
+            <td colspan="3" style="padding:10px 12px;color:#fff;font-weight:600">TOTAL</td>
+            <td class="td-num" style="color:var(--gold-light);font-weight:700">${fmt(totalDisb)}</td>
+            <td class="td-num" style="color:var(--gold-light);font-weight:700">${fmt(totalRep)}</td>
+            <td class="td-num" style="color:${outstanding>0?'#fca5a5':'var(--green-light)'};font-weight:700">${fmt(outstanding)}</td>
+            <td class="td-num" style="color:#fff">${fmt(totalIntC-totalIntP)}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>` : ''}
+
+  <!-- Full transaction log -->
+  <div class="section-header">
+    <div class="section-title">All Loan Transactions (${data.loans.length})</div>
+    <div class="flex gap-2">
+      <select id="loanMemberFilter" onchange="filterLoanTxns()" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Members</option>
+        ${data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}</option>`).join('')}
+      </select>
+      <select id="loanTypeFilter" onchange="filterLoanTxns()" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Types</option>
+        <option>Disbursement</option>
+        <option>Repayment</option>
+        <option>Interest Charge</option>
+        <option>Interest Payment</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openAddLoan()">+ Record Transaction</button>
+    </div>
   </div>
   <div class="card">
     <div class="table-wrap">
@@ -1395,16 +1473,28 @@ function renderLoans() {
         <thead><tr>
           <th>Date</th><th>Card</th><th>Member</th><th>Cluster</th><th>Type</th>
           <th class="td-num">Disbursed</th><th class="td-num">Repayment</th>
-          <th class="td-num">Int Charged</th><th class="td-num">Int Paid</th><th>Remarks</th><th>Action</th>
+          <th class="td-num">Int Charged</th><th class="td-num">Int Paid</th>
+          <th>Remarks</th><th>Action</th>
         </tr></thead>
-        <tbody>${loanRows()}</tbody>
+        <tbody id="loanTxnTbody">${loanRows()}</tbody>
       </table>
     </div>
   </div>`;
 }
 
-function loanRows() {
-  const rows = [...data.loans].sort((a,b)=>b.date.localeCompare(a.date));
+function filterLoanTxns() {
+  const member = document.getElementById('loanMemberFilter')?.value || '';
+  const type = document.getElementById('loanTypeFilter')?.value || '';
+  const tbody = document.getElementById('loanTxnTbody');
+  if (!tbody) return;
+  let rows = [...data.loans].sort((a,b)=>b.date.localeCompare(a.date));
+  if (member) rows = rows.filter(l=>l.card===member);
+  if (type) rows = rows.filter(l=>l.type===type);
+  tbody.innerHTML = loanRows(rows);
+}
+
+function loanRows(rows) {
+  if (!rows) rows = [...data.loans].sort((a,b)=>b.date.localeCompare(a.date));
   if (!rows.length) return '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-3)">No loan transactions yet.</td></tr>';
   return rows.map(l=>{
     const idx = data.loans.indexOf(l);
@@ -1686,19 +1776,65 @@ function renderLedger() {
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><div class="card-title">Loan Transaction History (${loans.length})</div></div>
+      <div class="card-header">
+        <div><div class="card-title">Loan Account</div>
+        <div class="card-subtitle">All disbursements and repayments with running balance</div></div>
+      </div>
+      ${loans.length ? `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)">
+        <div style="padding:12px 16px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px">Total Disbursed</div>
+          <div style="font-size:18px;font-weight:700;color:var(--red);margin-top:4px">${fmt(loans.reduce((s,l)=>s+(l.disb||0),0))}</div>
+        </div>
+        <div style="padding:12px 16px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px">Total Repaid</div>
+          <div style="font-size:18px;font-weight:700;color:var(--green);margin-top:4px">${fmt(loans.reduce((s,l)=>s+(l.rep||0),0))}</div>
+        </div>
+        <div style="padding:12px 16px;text-align:center">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px">Outstanding Balance</div>
+          <div style="font-size:18px;font-weight:700;color:${f.loan>0?'var(--red)':'var(--green)'};margin-top:4px">${fmt(f.loan)}</div>
+        </div>
+      </div>
       <div class="table-wrap" style="max-height:320px;overflow-y:auto">
         <table>
-          <thead><tr><th>Date</th><th>Type</th><th class="td-num">Disbursed</th><th class="td-num">Repaid</th><th class="td-num">Int</th></tr></thead>
-          <tbody>${loans.length ? loans.map(l=>`<tr>
-            <td class="text-sm">${l.date}</td>
-            <td><span class="badge ${l.type==='Disbursement'?'badge-red':l.type==='Repayment'?'badge-green':'badge-amber'}" style="font-size:10px">${l.type}</span></td>
-            <td class="td-num ${l.disb>0?'text-red':''}">${l.disb>0?fmt(l.disb):'—'}</td>
-            <td class="td-num ${l.rep>0?'text-green':''}">${l.rep>0?fmt(l.rep):'—'}</td>
-            <td class="td-num">${(l.intCharged||0)>0?fmt(l.intCharged):'—'}</td>
-          </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No loans yet</td></tr>'}</tbody>
+          <thead><tr>
+            <th>Date</th><th>Type</th>
+            <th class="td-num">Disbursed</th>
+            <th class="td-num">Repaid</th>
+            <th class="td-num">Int Charged</th>
+            <th class="td-num">Int Paid</th>
+            <th class="td-num">Running Balance</th>
+          </tr></thead>
+          <tbody>${(()=>{
+            let runBal = m.bfLoan || 0;
+            let runInt = m.bfLoanInt || 0;
+            const rows = [...loans].sort((a,b)=>a.date.localeCompare(b.date));
+            return rows.map(l => {
+              runBal += (l.disb||0) - (l.rep||0);
+              runInt += (l.intCharged||0) - (l.intPaid||0);
+              return `<tr>
+                <td class="text-sm">${l.date}</td>
+                <td><span class="badge ${l.type==='Disbursement'?'badge-red':l.type==='Repayment'?'badge-green':'badge-amber'}" style="font-size:10px">${l.type}</span></td>
+                <td class="td-num text-red">${(l.disb||0)>0?fmt(l.disb):'—'}</td>
+                <td class="td-num text-green">${(l.rep||0)>0?fmt(l.rep):'—'}</td>
+                <td class="td-num">${(l.intCharged||0)>0?fmt(l.intCharged):'—'}</td>
+                <td class="td-num text-green">${(l.intPaid||0)>0?fmt(l.intPaid):'—'}</td>
+                <td class="td-num" style="font-weight:700;color:${runBal>0?'var(--red)':'var(--green)'}">${fmt(runBal)}</td>
+              </tr>`;
+            }).join('');
+          })()}</tbody>
+          <tfoot>
+            <tr style="background:var(--surface-2)">
+              <td colspan="2" style="padding:10px 12px;font-weight:600;color:var(--text)">TOTALS</td>
+              <td class="td-num text-red" style="font-weight:700">${fmt(loans.reduce((s,l)=>s+(l.disb||0),0))}</td>
+              <td class="td-num text-green" style="font-weight:700">${fmt(loans.reduce((s,l)=>s+(l.rep||0),0))}</td>
+              <td class="td-num" style="font-weight:700">${fmt(loans.reduce((s,l)=>s+(l.intCharged||0),0))}</td>
+              <td class="td-num text-green" style="font-weight:700">${fmt(loans.reduce((s,l)=>s+(l.intPaid||0),0))}</td>
+              <td class="td-num" style="font-weight:700;color:${f.loan>0?'var(--red)':'var(--green)'}">${fmt(f.loan)}</td>
+            </tr>
+          </tfoot>
         </table>
-      </div>
+      </div>` : `<div style="padding:32px;text-align:center;color:var(--text-3)">No loan transactions yet</div>`}
     </div>
   </div>`}`;
 }
