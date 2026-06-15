@@ -368,6 +368,10 @@ tr:hover td { background: var(--surface-2); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Expenses
     </div>
+    <div class="nav-item" onclick="navigate('deposits')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Deposits
+    </div>
   </nav>
 
   <nav class="nav-section">
@@ -582,6 +586,75 @@ tr:hover td { background: var(--surface-2); }
   </div>
 </div>
 
+<!-- Deposit / Withdrawal Modal -->
+<div class="modal-overlay" id="depositModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="depositModalTitle">Record Deposit / Withdrawal</div>
+      <button class="modal-close" onclick="closeModal('depositModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Member info bar -->
+      <div id="depositMemberBar" style="background:var(--navy);color:#fff;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-weight:600;font-size:14px" id="depositMemberName">—</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55)" id="depositMemberCard">Card —</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:rgba(255,255,255,0.45)">Current Balance</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gold-light)" id="depositCurrentBal">₦0</div>
+        </div>
+      </div>
+
+      <!-- Transaction type toggle -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border-strong);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:16px">
+        <button id="btnDeposit" onclick="setDepositType('Deposit')"
+          style="padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:var(--green);color:#fff;transition:all 0.15s">
+          ⬆ Deposit
+        </button>
+        <button id="btnWithdraw" onclick="setDepositType('Withdrawal')"
+          style="padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:var(--surface-3);color:var(--text-2);transition:all 0.15s">
+          ⬇ Withdrawal
+        </button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group"><label>Date *</label><input id="dep-date" type="date"></div>
+        <div class="form-group">
+          <label id="dep-amount-label">Amount to Deposit (₦) *</label>
+          <input id="dep-amount" type="number" placeholder="0" oninput="checkWithdrawalLimit()" style="font-size:16px;font-weight:600">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Card Number</label>
+          <select id="dep-card" onchange="fillDepositMember()" style="display:none"></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Remarks</label>
+          <input id="dep-remarks" placeholder="Optional note">
+        </div>
+      </div>
+
+      <!-- Withdrawal warning -->
+      <div id="dep-warning" style="display:none;background:var(--red-light);border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--red);margin-top:8px"></div>
+
+      <!-- After withdrawal preview -->
+      <div id="dep-after" style="display:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-3)">Balance after transaction:</span>
+          <span id="dep-after-val" style="font-weight:700;font-family:monospace"></span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="dep-submit-btn" onclick="saveDeposit()">Save Deposit</button>
+        <button class="btn btn-outline" onclick="closeModal('depositModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Restore Confirmation Modal -->
 <div class="modal-overlay" id="restoreConfirmModal">
   <div class="modal" style="max-width:480px">
@@ -624,6 +697,7 @@ const data = {
   contributions: [],
   loans: [],
   expenses: [],
+  deposits: [],
   settings: { levy: 0.05, shares: 0.50, savings: 0.40, building: 0.05 }
 };
 
@@ -756,11 +830,12 @@ function showFbBanner() {
 }
 
 // ===== FIRESTORE COLLECTIONS =====
-const COLL = { members:'members', contributions:'contributions', loans:'loans', expenses:'expenses', settings:'settings' };
+const COLL = { members:'members', contributions:'contributions', loans:'loans', expenses:'expenses', deposits:'deposits', settings:'settings' };
 
 async function loadAllFromFirebase() {
-  const [mSnap, cSnap, lSnap, eSnap, sSnap] = await Promise.all([
+  const [mSnap, depSnap, cSnap, lSnap, eSnap, sSnap] = await Promise.all([
     db.collection(COLL.members).get(),
+    db.collection(COLL.deposits).get(),
     db.collection(COLL.contributions).get(),
     db.collection(COLL.loans).get(),
     db.collection(COLL.expenses).get(),
@@ -768,6 +843,7 @@ async function loadAllFromFirebase() {
   ]);
   const byDateDesc = (a,b) => (b.date||'').localeCompare(a.date||'');
   data.members = mSnap.docs.map(d => ({id:d.id, ...d.data()}));
+  data.deposits = depSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
   data.contributions = cSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
   data.loans = lSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
   data.expenses = eSnap.docs.map(d => ({id:d.id, ...d.data()})).sort(byDateDesc);
@@ -800,6 +876,10 @@ function subscribeToChanges() {
     db.collection(COLL.expenses).onSnapshot(snap => {
       data.expenses = snap.docs.map(d => ({id:d.id,...d.data()})).sort(byDateDesc);
       if (['expenses','dashboard'].includes(currentPage)) render(currentPage);
+    }),
+    db.collection(COLL.deposits).onSnapshot(snap => {
+      data.deposits = snap.docs.map(d => ({id:d.id,...d.data()})).sort(byDateDesc);
+      if (['deposits','dashboard','ledger'].includes(currentPage)) render(currentPage);
     })
   );
 }
@@ -828,6 +908,13 @@ async function fbSaveLoan(loan) {
   const { id, ...fields } = loan;
   if (id) { await db.collection(COLL.loans).doc(id).set(fields); }
   else { const r = await db.collection(COLL.loans).add(fields); loan.id = r.id; }
+}
+
+async function fbSaveDeposit(deposit) {
+  if (!db) return saveLocal();
+  const { id, ...fields } = deposit;
+  if (id) { await db.collection(COLL.deposits).doc(id).set(fields); }
+  else { const r = await db.collection(COLL.deposits).add(fields); deposit.id = r.id; }
 }
 
 async function fbSaveExpense(expense) {
@@ -931,7 +1018,7 @@ function calcMemberFunds(card) {
     shares: m.bfShares + contribs.reduce((s,c) => s + (c.shares||0), 0),
     savings: m.bfSavings + contribs.reduce((s,c) => s + (c.savings||0), 0),
     building: m.bfBuilding + contribs.reduce((s,c) => s + (c.building||0), 0),
-    deposit: m.bfDeposit,
+    deposit: m.bfDeposit + (data.deposits||[]).filter(d=>d.card===card&&!d.voided).reduce((s,d)=>s+(d.type==='Deposit'?d.amount:-(d.amount)),0),
     loan: m.bfLoan + loans.reduce((s,l) => s + (l.disb||0) - (l.rep||0), 0),
     loanInt: m.bfLoanInt + loans.reduce((s,l) => s + (l.intCharged||0) - (l.intPaid||0), 0),
     totalPaid: contribs.reduce((s,c) => s + (c.amount||0), 0),
@@ -976,6 +1063,7 @@ const pages = {
   contributions: { title:'Contributions', subtitle:'Weekly contribution records with auto-split' },
   loans: { title:'Loans', subtitle:'Loan disbursements, repayments and interest' },
   expenses: { title:'Expenses', subtitle:'Cooperative operating expenses' },
+  deposits: { title:'Deposits', subtitle:'Member cash deposits and withdrawals — fully refundable, no split' },
   'cluster-meeting': { title:'Weekly Cluster Meeting', subtitle:'Record contributions by cluster during meetings' },
   'cluster-summary': { title:'Cluster Summary', subtitle:'Totals and performance per cluster' },
   ledger: { title:'Member Ledger', subtitle:'Full account view for any member' },
@@ -1003,6 +1091,7 @@ function render(page) {
     contributions: renderContributions,
     loans: renderLoans,
     expenses: renderExpenses,
+    deposits: renderDeposits,
     'cluster-meeting': renderClusterMeeting,
     'cluster-summary': renderClusterSummary,
     ledger: renderLedger,
@@ -1059,6 +1148,11 @@ function renderDashboard() {
       <div class="metric-value">${fmt(gt.loanInt)}</div>
       <div class="metric-sub">Charged – Paid</div>
     </div>
+    <div class="metric-card green">
+      <div class="metric-label">Total Deposits Held</div>
+      <div class="metric-value">${fmt(gt.deposit)}</div>
+      <div class="metric-sub">Members' cash</div>
+    </div>
     <div class="metric-card ${pl>=0?'green':'red'}">
       <div class="metric-label">Net P&L</div>
       <div class="metric-value">${fmt(pl)}</div>
@@ -1091,7 +1185,7 @@ function renderDashboard() {
         <div class="pl-row"><span>Total Shares</span><span class="pl-amount">${fmt(gt.shares)}</span></div>
         <div class="pl-row"><span>Total Savings</span><span class="pl-amount">${fmt(gt.savings)}</span></div>
         <div class="pl-row"><span>Building Fund</span><span class="pl-amount">${fmt(gt.building)}</span></div>
-        <div class="pl-row"><span>Total Deposits</span><span class="pl-amount">${fmt(gt.deposit)}</span></div>
+        <div class="pl-row"><span>Total Deposits Held</span><span class="pl-amount text-green">${fmt(gt.deposit)}</span></div>
         <div class="pl-row"><span>Dev Levy Collected</span><span class="pl-amount">${fmt(gt.levy)}</span></div>
         <div class="pl-row total"><span>Loans Outstanding</span><span class="pl-amount text-red">${fmt(gt.loan)}</span></div>
       </div>
@@ -1178,6 +1272,7 @@ function memberRows(filter='', cluster='') {
       <td>
         <button class="btn btn-outline btn-sm" onclick="editMember('${m.card}')">Edit</button>
         <button class="btn btn-outline btn-sm" onclick="viewLedger('${m.card}')" style="margin-left:4px">Ledger</button>
+        <button class="btn btn-outline btn-sm" onclick="openDepositModal('${m.card}')" style="margin-left:4px;color:var(--green)" title="Record deposit or withdrawal">₦ Deposit</button>
         ${m.email ? `<button class="btn btn-outline btn-sm" onclick="emailMemberStatement('${m.card}')" style="margin-left:4px;color:var(--navy)" title="Send account statement by email">✉</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No email on file">✉</button>`}
         ${m.phone ? `<button class="btn btn-outline btn-sm" onclick="smsMemberStatement('${m.card}')" style="margin-left:4px;color:var(--green)" title="Send account statement by SMS">📱</button>` : `<button class="btn btn-outline btn-sm" style="margin-left:4px;opacity:0.35;cursor:not-allowed" title="No phone on file">📱</button>`}
       </td>
@@ -1563,7 +1658,11 @@ function renderLedger() {
     <div class="fund-card"><div class="fund-label">Shares</div><div class="fund-val">${fmt(f.shares)}</div></div>
     <div class="fund-card"><div class="fund-label">Savings</div><div class="fund-val">${fmt(f.savings)}</div></div>
     <div class="fund-card"><div class="fund-label">Building Fund</div><div class="fund-val">${fmt(f.building)}</div></div>
-    <div class="fund-card deposit"><div class="fund-label">Deposits</div><div class="fund-val">${fmt(f.deposit)}</div></div>
+    <div class="fund-card deposit" style="cursor:pointer" onclick="navigate('deposits')" title="Click to manage deposits">
+      <div class="fund-label">Deposits</div>
+      <div class="fund-val">${fmt(f.deposit)}</div>
+      <div style="font-size:10px;color:var(--green);margin-top:4px">Click to deposit/withdraw →</div>
+    </div>
     <div class="fund-card loan"><div class="fund-label">Loan Balance</div><div class="fund-val">${fmt(f.loan)}</div></div>
     <div class="fund-card loan"><div class="fund-label">Loan Interest</div><div class="fund-val">${fmt(f.loanInt)}</div></div>
   </div>
@@ -2558,6 +2657,289 @@ async function saveEmailSettings() {
   render('settings');
 }
 
+
+// ===== DEPOSITS MODULE =====
+let _depositType = 'Deposit';
+let _depositCard = null;
+
+function setDepositType(type) {
+  _depositType = type;
+  const isW = type === 'Withdrawal';
+  document.getElementById('btnDeposit').style.background = isW ? 'var(--surface-3)' : 'var(--green)';
+  document.getElementById('btnDeposit').style.color = isW ? 'var(--text-2)' : '#fff';
+  document.getElementById('btnWithdraw').style.background = isW ? 'var(--red)' : 'var(--surface-3)';
+  document.getElementById('btnWithdraw').style.color = isW ? '#fff' : 'var(--text-2)';
+  document.getElementById('dep-amount-label').textContent = isW ? 'Amount to Withdraw (₦) *' : 'Amount to Deposit (₦) *';
+  document.getElementById('dep-submit-btn').textContent = isW ? 'Save Withdrawal' : 'Save Deposit';
+  document.getElementById('dep-submit-btn').style.background = isW ? 'var(--red)' : '';
+  document.getElementById('dep-submit-btn').style.borderColor = isW ? 'var(--red)' : '';
+  checkWithdrawalLimit();
+}
+
+function getMemberDepositBalance(card) {
+  const m = memberByCard(card);
+  if (!m) return 0;
+  const bf = m.bfDeposit || 0;
+  const txns = (data.deposits||[]).filter(d => d.card === card && !d.voided);
+  return bf + txns.reduce((s,d) => s + (d.type==='Deposit' ? d.amount : -d.amount), 0);
+}
+
+function checkWithdrawalLimit() {
+  if (!_depositCard) return;
+  const amt = +document.getElementById('dep-amount').value || 0;
+  const bal = getMemberDepositBalance(_depositCard);
+  const warn = document.getElementById('dep-warning');
+  const after = document.getElementById('dep-after');
+  const afterVal = document.getElementById('dep-after-val');
+  if (amt > 0) {
+    after.style.display = 'block';
+    const newBal = _depositType === 'Deposit' ? bal + amt : bal - amt;
+    afterVal.textContent = fmt(newBal);
+    afterVal.style.color = newBal >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    after.style.display = 'none';
+  }
+  if (_depositType === 'Withdrawal' && amt > bal) {
+    warn.style.display = 'block';
+    warn.textContent = `⚠ Withdrawal amount (${fmt(amt)}) exceeds available balance (${fmt(bal)}). Cannot overdraw a deposit account.`;
+    document.getElementById('dep-submit-btn').disabled = true;
+    document.getElementById('dep-submit-btn').style.opacity = '0.5';
+  } else {
+    warn.style.display = 'none';
+    document.getElementById('dep-submit-btn').disabled = false;
+    document.getElementById('dep-submit-btn').style.opacity = '1';
+  }
+}
+
+function openDepositModal(card) {
+  _depositCard = card;
+  _depositType = 'Deposit';
+  setDepositType('Deposit');
+  document.getElementById('dep-date').value = today();
+  document.getElementById('dep-amount').value = '';
+  document.getElementById('dep-remarks').value = '';
+  document.getElementById('dep-warning').style.display = 'none';
+  document.getElementById('dep-after').style.display = 'none';
+  fillDepositMember();
+  openModal('depositModal');
+}
+
+function openDepositModalNoCard() {
+  _depositCard = null;
+  _depositType = 'Deposit';
+  setDepositType('Deposit');
+  document.getElementById('dep-date').value = today();
+  document.getElementById('dep-amount').value = '';
+  document.getElementById('dep-remarks').value = '';
+  document.getElementById('dep-warning').style.display = 'none';
+  document.getElementById('dep-after').style.display = 'none';
+  // show card selector
+  const sel = document.getElementById('dep-card');
+  sel.style.display = 'block';
+  sel.innerHTML = '<option value="">— Select member —</option>' +
+    data.members.map(m => {
+      const bal = getMemberDepositBalance(m.card);
+      return `<option value="${m.card}">${m.card} – ${m.name} (Bal: ${fmt(bal)})</option>`;
+    }).join('');
+  document.getElementById('depositMemberName').textContent = '— Select a member above —';
+  document.getElementById('depositMemberCard').textContent = '';
+  document.getElementById('depositCurrentBal').textContent = '₦0';
+  openModal('depositModal');
+}
+
+function fillDepositMember() {
+  const card = _depositCard || document.getElementById('dep-card').value;
+  if (!card) return;
+  _depositCard = card;
+  const m = memberByCard(card);
+  if (!m) return;
+  const bal = getMemberDepositBalance(card);
+  document.getElementById('depositMemberName').textContent = m.name;
+  document.getElementById('depositMemberCard').textContent = `Card #${m.card} · ${m.cluster}`;
+  document.getElementById('depositCurrentBal').textContent = fmt(bal);
+  document.getElementById('dep-card').style.display = 'none';
+  checkWithdrawalLimit();
+}
+
+async function saveDeposit() {
+  const card = _depositCard;
+  const amount = +document.getElementById('dep-amount').value;
+  const date = document.getElementById('dep-date').value;
+  if (!card) { toast('Please select a member'); return; }
+  if (!amount || amount <= 0) { toast('Please enter a valid amount'); return; }
+  if (!date) { toast('Please select a date'); return; }
+  const m = memberByCard(card);
+  const bal = getMemberDepositBalance(card);
+  if (_depositType === 'Withdrawal' && amount > bal) {
+    toast('Cannot withdraw more than the available balance'); return;
+  }
+  const deposit = {
+    id: null,
+    date, card, memberName: m.name, cluster: m.cluster,
+    type: _depositType, amount,
+    balanceBefore: bal,
+    balanceAfter: _depositType === 'Deposit' ? bal + amount : bal - amount,
+    remarks: document.getElementById('dep-remarks').value,
+    voided: false,
+    createdAt: new Date().toISOString()
+  };
+  if (!data.deposits) data.deposits = [];
+  data.deposits.unshift(deposit);
+  await fbSaveDeposit(deposit);
+  save();
+  closeModal('depositModal');
+  toast(`✓ ${_depositType} of ${fmt(amount)} recorded for ${m.name}`);
+  if (!db) render(currentPage);
+}
+
+function renderDeposits() {
+  const allDeps = (data.deposits||[]).filter(d => !d.voided);
+  const totalIn = allDeps.filter(d=>d.type==='Deposit').reduce((s,d)=>s+d.amount,0);
+  const totalOut = allDeps.filter(d=>d.type==='Withdrawal').reduce((s,d)=>s+d.amount,0);
+  const totalHeld = totalIn - totalOut;
+  // per-member summary
+  const memberBalances = data.members.map(m => ({
+    ...m, balance: getMemberDepositBalance(m.card),
+    txnCount: (data.deposits||[]).filter(d=>d.card===m.card&&!d.voided).length
+  })).filter(m => m.balance > 0 || m.txnCount > 0);
+
+  return `
+  <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="metric-card navy"><div class="metric-label">Total Held</div><div class="metric-value">${fmt(totalHeld)}</div><div class="metric-sub">Members' money</div></div>
+    <div class="metric-card green"><div class="metric-label">Total Deposited</div><div class="metric-value">${fmt(totalIn)}</div><div class="metric-sub">All time</div></div>
+    <div class="metric-card red"><div class="metric-label">Total Withdrawn</div><div class="metric-value">${fmt(totalOut)}</div><div class="metric-sub">All time</div></div>
+    <div class="metric-card"><div class="metric-label">Active Depositors</div><div class="metric-value">${memberBalances.filter(m=>m.balance>0).length}</div><div class="metric-sub">With balance > 0</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- Member deposit balances -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Member Deposit Balances</div>
+        <div class="card-subtitle">Current balance per member (B/F + all transactions)</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openDepositModalNoCard()">+ Record Transaction</button>
+      </div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Card</th><th>Member</th><th>Cluster</th><th class="td-num">Balance</th><th>Action</th></tr></thead>
+          <tbody>
+            ${data.members.map(m => {
+              const bal = getMemberDepositBalance(m.card);
+              return `<tr>
+                <td><span class="mono" style="font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:4px">${m.card}</span></td>
+                <td class="td-name">${m.name}</td>
+                <td><span class="badge badge-navy" style="font-size:10px">${m.cluster}</span></td>
+                <td class="td-num" style="font-weight:700;color:${bal>0?'var(--green)':bal<0?'var(--red)':'var(--text-3)'}">${fmt(bal)}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-outline btn-sm" style="color:var(--green);font-size:11px" onclick="openDepositModal('${m.card}')">⬆ Dep</button>
+                  <button class="btn btn-outline btn-sm" style="color:var(--red);font-size:11px;margin-left:4px" onclick="openDepositModal('${m.card}');setDepositType('Withdrawal')">⬇ With</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick stats per cluster -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Deposits by Cluster</div></div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Cluster</th><th class="td-num">Total Held</th><th class="td-num">Depositors</th></tr></thead>
+          <tbody>
+            ${CLUSTERS.map(cl => {
+              const members = data.members.filter(m=>m.cluster===cl);
+              const held = members.reduce((s,m)=>s+getMemberDepositBalance(m.card),0);
+              const active = members.filter(m=>getMemberDepositBalance(m.card)>0).length;
+              return `<tr>
+                <td class="td-name">${cl}</td>
+                <td class="td-num" style="font-weight:600;color:${held>0?'var(--green)':'var(--text-3)'}">${fmt(held)}</td>
+                <td class="td-num">${active}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--navy)">
+              <td style="padding:10px 12px;color:#fff;font-weight:600">TOTAL</td>
+              <td class="td-num" style="color:var(--gold-light);font-weight:700">${fmt(totalHeld)}</td>
+              <td class="td-num" style="color:#fff">${memberBalances.filter(m=>m.balance>0).length}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction history -->
+  <div class="section-header">
+    <div class="section-title">All Deposit Transactions (${(data.deposits||[]).length})</div>
+    <div class="flex gap-2">
+      <select id="depMemberFilter" onchange="filterDepositTxns()" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Members</option>
+        ${data.members.map(m=>`<option value="${m.card}">${m.card} – ${m.name}</option>`).join('')}
+      </select>
+      <select id="depTypeFilter" onchange="filterDepositTxns()" style="padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px">
+        <option value="">All Types</option>
+        <option value="Deposit">Deposits only</option>
+        <option value="Withdrawal">Withdrawals only</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openDepositModalNoCard()">+ Record Transaction</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Card</th><th>Member</th><th>Cluster</th><th>Type</th>
+          <th class="td-num">Amount</th><th class="td-num">Balance Before</th><th class="td-num">Balance After</th>
+          <th>Remarks</th><th>Action</th>
+        </tr></thead>
+        <tbody id="depositTxnTbody">${depositTxnRows()}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function depositTxnRows(memberFilter='', typeFilter='') {
+  let rows = [...(data.deposits||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  if (memberFilter) rows = rows.filter(d=>d.card===memberFilter);
+  if (typeFilter) rows = rows.filter(d=>d.type===typeFilter);
+  if (!rows.length) return '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-3)">No deposit transactions yet. Click "+ Record Transaction" to begin.</td></tr>';
+  return rows.map(d => {
+    const idx = data.deposits.indexOf(d);
+    const voided = d.voided;
+    const rs = voided ? 'opacity:0.45;text-decoration:line-through;' : '';
+    const isDeposit = d.type === 'Deposit';
+    return `<tr style="${rs}background:${voided?'var(--surface-3)':''}">
+      <td class="text-sm">${d.date}</td>
+      <td><span class="mono" style="font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:4px">${d.card}</span></td>
+      <td class="td-name">${d.memberName}</td>
+      <td><span class="badge badge-navy" style="font-size:10px">${d.cluster}</span></td>
+      <td><span class="badge ${isDeposit?'badge-green':'badge-red'}">${isDeposit?'⬆ Deposit':'⬇ Withdrawal'}</span></td>
+      <td class="td-num" style="font-weight:700;color:${isDeposit?'var(--green)':'var(--red)'}">${isDeposit?'+':'−'}${fmt(d.amount)}</td>
+      <td class="td-num text-muted">${d.balanceBefore!==undefined?fmt(d.balanceBefore):'—'}</td>
+      <td class="td-num" style="font-weight:600;color:${(d.balanceAfter||0)>=0?'var(--navy)':'var(--red)'}">${d.balanceAfter!==undefined?fmt(d.balanceAfter):'—'}</td>
+      <td class="text-sm text-muted">${d.remarks||'—'}</td>
+      <td style="white-space:nowrap">
+        ${voided
+          ? `<span class="badge badge-red" style="font-size:10px">Voided</span>
+             <button class="btn btn-outline btn-sm" style="margin-left:4px;font-size:11px" onclick="deleteRecord('deposits',${idx})">Delete</button>`
+          : `<button class="btn btn-outline btn-sm" style="font-size:11px;color:var(--red)" onclick="voidRecord('deposits',${idx})">Void</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDepositTxns() {
+  const m = document.getElementById('depMemberFilter')?.value || '';
+  const t = document.getElementById('depTypeFilter')?.value || '';
+  const tbody = document.getElementById('depositTxnTbody');
+  if (tbody) tbody.innerHTML = depositTxnRows(m, t);
+}
+
 // ===== PIN LOGIN =====
 let _pinEntry = '';
 const DEFAULT_PIN = '1234';
@@ -2644,7 +3026,7 @@ async function voidRecord(type, idx) {
   if (!rec) return;
   if (!confirm(`Void this ${type.slice(0,-1)} entry?\n\nDate: ${rec.date}\nAmount: ${fmt(rec.amount||rec.disb||rec.rep||0)}\n\nThe entry will remain visible but struck-through and excluded from all totals.`)) return;
   data[type][idx].voided = true;
-  if (db && rec.id) { await fbVoidRecord(type, rec.id, true); } else { save(); }
+  if (db && rec.id && COLL[type]) { await fbVoidRecord(type, rec.id, true); } else { save(); }
   toast(`Entry voided — excluded from all calculations`);
   if (!db) render(currentPage);
 }
@@ -2669,9 +3051,11 @@ function backupData() {
       exportedAt: new Date().toISOString(),
       exportedAtReadable: new Date().toLocaleString('en-GB'),
       memberCount: data.members.length,
+      depositCount: (data.deposits||[]).length,
       contributionCount: data.contributions.length,
       loanCount: data.loans.length,
       expenseCount: data.expenses.length,
+      depositCount: (data.deposits||[]).length,
     },
     ...data
   };
