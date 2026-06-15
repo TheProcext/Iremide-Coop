@@ -854,7 +854,67 @@ async function loadAllFromFirebase() {
     if (s.termii) data.termii = s.termii;
     if (s.firebaseConfig) data.firebaseConfig = s.firebaseConfig;
   }
+  // Run migrations after loading
+  await runMigrations();
 }
+
+// ===== DATA MIGRATION SYSTEM =====
+// Current schema version — bump this number whenever you make a breaking data change
+const SCHEMA_VERSION = 2;
+
+async function runMigrations() {
+  const storedVersion = parseInt(localStorage.getItem('iremide_schema_version') || '1');
+  if (storedVersion >= SCHEMA_VERSION) return; // already up to date
+
+  console.log(`Running migrations from v${storedVersion} to v${SCHEMA_VERSION}…`);
+
+  // ── Migration v1 → v2 ──────────────────────────────────────────────────────
+  // Added: voided field on contributions, loans, expenses, deposits
+  // Fix: old records without voided field — treat as voided:false
+  if (storedVersion < 2) {
+    let fixed = 0;
+    const batch = db ? db.batch() : null;
+
+    ['contributions','loans','expenses','deposits'].forEach(type => {
+      (data[type]||[]).forEach(rec => {
+        if (rec.voided === undefined || rec.voided === null) {
+          rec.voided = false;
+          fixed++;
+          // Write fix back to Firestore if connected
+          if (batch && rec.id && COLL[type]) {
+            batch.update(db.collection(COLL[type]).doc(rec.id), { voided: false });
+          }
+        }
+      });
+    });
+
+    if (batch && fixed > 0) {
+      try { await batch.commit(); } catch(e) { console.warn('Migration batch write failed:', e); }
+    }
+
+    if (fixed > 0) console.log(`v1→v2: Fixed voided field on ${fixed} records`);
+  }
+
+  // ── Add future migrations here ─────────────────────────────────────────────
+  // if (storedVersion < 3) { ... migration v2→v3 ... }
+  // if (storedVersion < 4) { ... migration v3→v4 ... }
+
+  // Save new version
+  localStorage.setItem('iremide_schema_version', SCHEMA_VERSION.toString());
+  console.log(`✓ Migrations complete — now at schema v${SCHEMA_VERSION}`);
+}
+
+// Safe field readers — always use these instead of accessing fields directly
+// These handle missing fields on old records gracefully
+const safeRead = {
+  voided: rec => rec.voided === true,           // missing = not voided
+  amount: rec => Number(rec.amount) || 0,
+  disb:   rec => Number(rec.disb) || 0,
+  rep:    rec => Number(rec.rep) || 0,
+  intCharged: rec => Number(rec.intCharged) || 0,
+  intPaid:    rec => Number(rec.intPaid) || 0,
+};
+
 
 function subscribeToChanges() {
   _unsubscribers.forEach(u => u());
@@ -1006,8 +1066,8 @@ const initials = name => name.split(' ').filter(Boolean).slice(-2).map(n=>n[0]).
 
 function memberByCard(card) { return data.members.find(m => m.card === card); }
 
-function memberContribs(card) { return data.contributions.filter(c => c.card === card && !c.voided); }
-function memberLoans(card) { return data.loans.filter(l => l.card === card && !l.voided); }
+function memberContribs(card) { return data.contributions.filter(c => c.card === card && c.voided!==true); }
+function memberLoans(card) { return data.loans.filter(l => l.card === card && l.voided!==true); }
 
 function calcMemberFunds(card) {
   const m = memberByCard(card);
@@ -1018,7 +1078,7 @@ function calcMemberFunds(card) {
     shares: m.bfShares + contribs.reduce((s,c) => s + (c.shares||0), 0),
     savings: m.bfSavings + contribs.reduce((s,c) => s + (c.savings||0), 0),
     building: m.bfBuilding + contribs.reduce((s,c) => s + (c.building||0), 0),
-    deposit: m.bfDeposit + (data.deposits||[]).filter(d=>d.card===card&&!d.voided).reduce((s,d)=>s+(d.type==='Deposit'?d.amount:-(d.amount)),0),
+    deposit: m.bfDeposit + (data.deposits||[]).filter(d=>d.card===card&&d.voided!==true).reduce((s,d)=>s+(d.type==='Deposit'?d.amount:-(d.amount)),0),
     loan: m.bfLoan + loans.reduce((s,l) => s + (l.disb||0) - (l.rep||0), 0),
     loanInt: m.bfLoanInt + loans.reduce((s,l) => s + (l.intCharged||0) - (l.intPaid||0), 0),
     totalPaid: contribs.reduce((s,c) => s + (c.amount||0), 0),
@@ -1048,10 +1108,10 @@ function grandTotals() {
   }, {shares:0,savings:0,building:0,deposit:0,loan:0,loanInt:0,levy:0,totalPaid:0});
 }
 
-function totalExpenses() { return data.expenses.filter(e=>!e.voided).reduce((s,e) => s + (e.amount||0), 0); }
-function totalInterestCharged() { return data.loans.filter(l=>!l.voided).reduce((s,l) => s + (l.intCharged||0), 0); }
-function totalInterestPaid() { return data.loans.filter(l=>!l.voided).reduce((s,l) => s + (l.intPaid||0), 0); }
-function totalLevyCollected() { return data.contributions.filter(c=>!c.voided).reduce((s,c) => s + (c.levy||0), 0); }
+function totalExpenses() { return data.expenses.filter(e=>e.voided!==true).reduce((s,e) => s + (e.amount||0), 0); }
+function totalInterestCharged() { return data.loans.filter(l=>l.voided!==true).reduce((s,l) => s + (l.intCharged||0), 0); }
+function totalInterestPaid() { return data.loans.filter(l=>l.voided!==true).reduce((s,l) => s + (l.intPaid||0), 0); }
+function totalLevyCollected() { return data.contributions.filter(c=>c.voided!==true).reduce((s,c) => s + (c.levy||0), 0); }
 function coopIncome() { return totalLevyCollected() + totalInterestCharged(); }
 function netPL() { return coopIncome() - totalExpenses(); }
 
@@ -1371,10 +1431,10 @@ function filterContribs() {
 }
 
 function renderLoans() {
-  const totalDisb = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.disb||0),0);
-  const totalRep = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.rep||0),0);
-  const totalIntC = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.intCharged||0),0);
-  const totalIntP = data.loans.filter(l=>!l.voided).reduce((s,l)=>s+(l.intPaid||0),0);
+  const totalDisb = data.loans.filter(l=>l.voided!==true).reduce((s,l)=>s+(l.disb||0),0);
+  const totalRep = data.loans.filter(l=>l.voided!==true).reduce((s,l)=>s+(l.rep||0),0);
+  const totalIntC = data.loans.filter(l=>l.voided!==true).reduce((s,l)=>s+(l.intCharged||0),0);
+  const totalIntP = data.loans.filter(l=>l.voided!==true).reduce((s,l)=>s+(l.intPaid||0),0);
   const outstanding = totalDisb - totalRep;
   const repRate = totalDisb > 0 ? ((totalRep/totalDisb)*100).toFixed(1) : '0.0';
 
@@ -1986,6 +2046,7 @@ function renderSettings() {
           ${CLUSTERS.map(c=>`<span class="badge badge-navy" style="font-size:12px;padding:5px 12px">${c}</span>`).join('')}
         </div>
         <p class="text-sm text-muted" style="margin-top:12px">To add or rename clusters, edit the CLUSTERS constant in the source.</p>
+        <p class="text-sm text-muted" style="margin-top:8px">Schema version: <strong>v${SCHEMA_VERSION}</strong> — data migrations run automatically on each load.</p>
       </div>
     </div>
   </div>`;
@@ -2816,7 +2877,7 @@ function getMemberDepositBalance(card) {
   const m = memberByCard(card);
   if (!m) return 0;
   const bf = m.bfDeposit || 0;
-  const txns = (data.deposits||[]).filter(d => d.card === card && !d.voided);
+  const txns = (data.deposits||[]).filter(d => d.card === card && d.voided!==true);
   return bf + txns.reduce((s,d) => s + (d.type==='Deposit' ? d.amount : -d.amount), 0);
 }
 
