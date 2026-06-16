@@ -319,10 +319,10 @@ tr:hover td { background: var(--surface-2); }
   </div>
 </div>
 
-<!-- Firebase not configured banner (shown until user adds config) -->
+<!-- Firebase connection issue banner -->
 <div id="fbBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:500;background:#b91c1c;color:#fff;padding:10px 20px;font-size:13px;display:none;align-items:center;justify-content:space-between">
-  <span>⚠ Firebase not configured — data is saving locally only. Go to Settings → Firebase to connect your database.</span>
-  <button onclick="document.getElementById('fbBanner').style.display='none';navigate('settings')" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Configure →</button>
+  <span id="fbBannerMsg">⚠ Firebase connection issue — data is saving locally only.</span>
+  <button onclick="location.reload()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Reconnect →</button>
 </div>
 
 <!-- First-run Firebase setup screen -->
@@ -771,26 +771,52 @@ async function initFirebase() {
     return;
   }
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 10000)
+    setTimeout(() => reject(new Error('Timed out — check your internet connection')), 15000)
   );
   try {
     setLoadProgress(30, 'Connecting to Firebase…');
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
-    try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {}
+    try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {
+      // Persistence can fail harmlessly (multi-tab, unsupported browser) — never block on this
+      console.warn('Persistence not enabled:', e.code || e.message);
+    }
     setLoadProgress(60, 'Loading data…');
-    await Promise.race([loadAllFromFirebase(), timeout]);
+    try {
+      await Promise.race([loadAllFromFirebase(), timeout]);
+    } catch(loadErr) {
+      // If the read fails specifically due to stale permission-denied state from
+      // when rules were stricter, force a clean reconnect once before giving up.
+      if (loadErr.code === 'permission-denied' || /permission/i.test(loadErr.message||'')) {
+        console.warn('Permission error — retrying with fresh connection…');
+        setLoadProgress(50, 'Refreshing connection…');
+        try {
+          await db.terminate();
+          db = firebase.firestore();
+          await Promise.race([loadAllFromFirebase(), timeout]);
+        } catch(retryErr) {
+          throw retryErr; // genuinely blocked — surface real error below
+        }
+      } else {
+        throw loadErr;
+      }
+    }
     setLoadProgress(100, 'Connected ✓');
     _fbConnected = true;
     window._fbConnected = true;
     subscribeToChanges();
     setTimeout(finishLoading, 300);
   } catch(err) {
-    console.error('Firebase error:', err.message);
-    setLoadProgress(100, 'Could not connect — ' + err.message);
+    console.error('Firebase error:', err.code || '', err.message);
+    const friendlyMsg = err.code === 'permission-denied'
+      ? 'Permission denied — check Firestore rules'
+      : (err.message || 'Unknown error');
+    setLoadProgress(100, 'Could not connect — ' + friendlyMsg);
     db = null;
+    _fbConnected = false;
+    window._fbConnected = false;
     loadLocalFallback();
-    setTimeout(() => { finishLoading(); showFbBanner(); }, 1500);
+    setTimeout(() => { finishLoading(); showFbBanner(friendlyMsg); }, 1500);
   }
 }
 
@@ -853,8 +879,10 @@ function finishLoading() {
   if (overlay) { overlay.style.opacity = '0'; overlay.style.transition = 'opacity 0.3s'; setTimeout(()=>overlay.style.display='none', 300); }
 }
 
-function showFbBanner() {
+function showFbBanner(msg) {
   const b = document.getElementById('fbBanner');
+  const m = document.getElementById('fbBannerMsg');
+  if (m) m.textContent = '⚠ Firebase connection issue: ' + (msg || 'unknown error') + ' — data is saving locally only.';
   if (b) b.style.display = 'flex';
 }
 
@@ -1056,8 +1084,12 @@ async function saveFirebaseConfig() {
 }
 
 async function testFirebaseConnection() {
+  if (!firebase || !firebase.apps.length) {
+    toast('Firebase SDK not loaded — check your internet connection and reload');
+    return;
+  }
   if (!db) {
-    toast('Not connected — go to Settings → Firebase → Enter Firebase Config');
+    toast('Database not connected — click Reconnect, or check Firestore rules in Firebase Console');
     return;
   }
   try {
@@ -1065,7 +1097,11 @@ async function testFirebaseConnection() {
     await db.collection('_test').doc('ping').delete();
     toast('✓ Firebase connection is working perfectly');
   } catch(e) {
-    toast('✗ Test failed: ' + (e.message || 'Check Firestore rules are set to test mode'));
+    if (e.code === 'permission-denied') {
+      toast('✗ Permission denied — your Firestore rules are blocking access. Check Firebase Console → Firestore → Rules');
+    } else {
+      toast('✗ Test failed: ' + (e.message || 'Unknown error'));
+    }
   }
 }
 
@@ -1948,13 +1984,13 @@ function renderSettings() {
         <div class="form-actions">
           <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
           <button class="btn btn-outline" onclick="migrateLocalToFirebase()" style="color:var(--green)">⬆ Upload local data to Firebase</button>
-          <button class="btn btn-outline" onclick="if(confirm('Disconnect Firebase and reset config?')){clearFirebaseConfig();toast('Config cleared — reload to reconnect');}" style="color:var(--red)">Disconnect</button>
         </div>` : `
         <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px">
-          Firebase is not connected. Click the button below to enter your config keys.
+          Firebase is not connected right now. This is usually one of: (1) Firestore rules are blocking access, (2) a stale cached connection from before a rules change, or (3) a network issue. Check your Firestore rules in Firebase Console, then click Reconnect.
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="showSetupScreen()" style="background:#f97316;border-color:#f97316">Enter Firebase Config</button>
+          <button class="btn btn-primary" onclick="location.reload()" style="background:#f97316;border-color:#f97316">🔄 Reconnect</button>
+          <button class="btn btn-outline" onclick="testFirebaseConnection()">Test Connection</button>
         </div>`}
       </div>
     </div>
