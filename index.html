@@ -761,42 +761,44 @@ function clearFirebaseConfig() {
   localStorage.removeItem('iremide_fb');
 }
 
-async function initFirebase() {
-  setLoadProgress(10, 'Reading configuration…');
+// Sets up the Firebase app connection only — does NOT read any Firestore data.
+// Data reads must wait until a user is actually signed in (see loadDataAfterAuth).
+function initFirebaseApp() {
   const cfg = getFirebaseConfig();
-  if (!cfg) {
-    setLoadProgress(100, 'Setup required');
-    loadLocalFallback();
-    setTimeout(() => { finishLoading(); showSetupScreen(); }, 400);
-    return;
+  if (!cfg) { _fbConfigMissing = true; return false; }
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    db = firebase.firestore();
+    return true;
+  } catch(err) {
+    console.error('Firebase app init failed:', err.message);
+    return false;
   }
+}
+
+// Reads all Firestore data — only call this AFTER a user is confirmed signed in
+// (or after confirming Firebase Auth is not in use / rules are open).
+let _fbConfigMissing = false;
+async function loadDataAfterAuth() {
+  if (!db) { loadLocalFallback(); return; }
+  setLoadProgress(60, 'Loading data…');
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Timed out — check your internet connection')), 15000)
   );
   try {
-    setLoadProgress(30, 'Connecting to Firebase…');
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    db = firebase.firestore();
     try { await db.enablePersistence({ synchronizeTabs: true }); } catch(e) {
-      // Persistence can fail harmlessly (multi-tab, unsupported browser) — never block on this
       console.warn('Persistence not enabled:', e.code || e.message);
     }
-    setLoadProgress(60, 'Loading data…');
     try {
       await Promise.race([loadAllFromFirebase(), timeout]);
     } catch(loadErr) {
-      // If the read fails specifically due to stale permission-denied state from
-      // when rules were stricter, force a clean reconnect once before giving up.
+      // Stale permission-denied state from a recent rules change — force one clean retry
       if (loadErr.code === 'permission-denied' || /permission/i.test(loadErr.message||'')) {
         console.warn('Permission error — retrying with fresh connection…');
         setLoadProgress(50, 'Refreshing connection…');
-        try {
-          await db.terminate();
-          db = firebase.firestore();
-          await Promise.race([loadAllFromFirebase(), timeout]);
-        } catch(retryErr) {
-          throw retryErr; // genuinely blocked — surface real error below
-        }
+        await db.terminate();
+        db = firebase.firestore();
+        await Promise.race([loadAllFromFirebase(), timeout]);
       } else {
         throw loadErr;
       }
@@ -809,16 +811,32 @@ async function initFirebase() {
   } catch(err) {
     console.error('Firebase error:', err.code || '', err.message);
     const friendlyMsg = err.code === 'permission-denied'
-      ? 'Permission denied — check Firestore rules'
+      ? 'Permission denied — sign in required, or check Firestore rules'
       : (err.message || 'Unknown error');
     setLoadProgress(100, 'Could not connect — ' + friendlyMsg);
-    db = null;
     _fbConnected = false;
     window._fbConnected = false;
     loadLocalFallback();
     setTimeout(() => { finishLoading(); showFbBanner(friendlyMsg); }, 1500);
   }
 }
+
+// Legacy wrapper kept for any old references — now just does app init + immediate load.
+// Only used as a fallback path when Firebase Auth is not enabled at all (no users created),
+// in which case there is no "wait for sign-in" step needed.
+async function initFirebase() {
+  setLoadProgress(10, 'Reading configuration…');
+  const ok = initFirebaseApp();
+  if (!ok) {
+    setLoadProgress(100, _fbConfigMissing ? 'Setup required' : 'Connection failed');
+    loadLocalFallback();
+    if (_fbConfigMissing) { setTimeout(() => { finishLoading(); showSetupScreen(); }, 400); }
+    else { setTimeout(finishLoading, 600); }
+    return;
+  }
+  await loadDataAfterAuth();
+}
+
 
 // ===== SETUP SCREEN — shown on first run or when config is missing =====
 function showSetupScreen() {
@@ -3238,17 +3256,27 @@ let currentUser = null;
 let _authEnabled = false;
 
 function initAuth() {
-  if (!firebase.apps.length) return; // Firebase not initialised yet
+  if (!firebase.apps.length) return Promise.resolve(false);
   try {
     auth = firebase.auth();
     _authEnabled = true;
-    auth.onAuthStateChanged(user => {
-      currentUser = user;
-      updateAuthUI();
+    return new Promise(resolve => {
+      // onAuthStateChanged fires once immediately with the resolved persisted session
+      // (or null) — we wait for that first callback before letting gateAppEntry proceed,
+      // otherwise auth.currentUser may read as null even when a session exists.
+      const unsub = auth.onAuthStateChanged(user => {
+        currentUser = user;
+        updateAuthUI();
+        unsub(); // only need the first resolution to unblock startup
+        resolve(true);
+        // Re-subscribe for ongoing changes (login/logout while app is open)
+        auth.onAuthStateChanged(u => { currentUser = u; updateAuthUI(); });
+      });
     });
   } catch(e) {
     console.warn('Firebase Auth not available:', e.message);
     _authEnabled = false;
+    return Promise.resolve(false);
   }
 }
 
@@ -3289,7 +3317,12 @@ async function doLogin() {
   try {
     await auth.signInWithEmailAndPassword(email, password);
     hideLoginScreen();
+    document.getElementById('fbLoading').style.display = 'flex';
+    document.getElementById('fbLoading').style.opacity = '1';
+    setLoadProgress(20, 'Signed in — loading your data…');
+    await loadDataAfterAuth();
     initPin(); // proceed to PIN check (or straight in if no PIN needed)
+    navigate(currentPage || 'dashboard');
     toast(`✓ Signed in as ${email}`);
   } catch(e) {
     let msg = 'Sign in failed';
@@ -3298,6 +3331,7 @@ async function doLogin() {
     else if (e.code === 'auth/too-many-requests') msg = 'Too many attempts — try again later';
     else if (e.code === 'auth/network-request-failed') msg = 'Network error — check your connection';
     errEl.textContent = msg;
+    finishLoading();
   } finally {
     btn.textContent = 'Sign In';
     btn.disabled = false;
@@ -3329,29 +3363,42 @@ async function sendPasswordReset() {
   }
 }
 
-// Decide what screen to show on startup: login (if Auth has users) or straight to PIN (legacy)
-function gateAppEntry() {
+// Decide what screen to show on startup: login (if Auth has users) or straight to PIN (legacy).
+// Critically: Firestore data is only loaded AFTER this confirms either (a) a real signed-in
+// user exists, or (b) Firebase Auth isn't in use at all — never before, to avoid permission errors.
+async function gateAppEntry() {
   if (_authEnabled && auth) {
     if (auth.currentUser) {
-      // already logged in this session
+      // Already signed in (session persisted across reload) — safe to load data now
       hideLoginScreen();
+      setLoadProgress(60, 'Loading your data…');
+      await loadDataAfterAuth();
       initPin();
+      finishLoading();
     } else {
-      // Check if Auth has ANY login attempt expected — we simply show login screen
-      // if Auth is enabled. If the client hasn't created any users yet, they can
-      // still click "skip" via PIN-only legacy mode through Settings.
       const legacyMode = localStorage.getItem('iremide_auth_skip') === '1';
       if (legacyMode) {
+        // No Auth users set up yet for this client — rules are presumably still open,
+        // so it's safe to load data without a signed-in user.
         hideLoginScreen();
+        setLoadProgress(60, 'Loading your data…');
+        await loadDataAfterAuth();
         initPin();
+        finishLoading();
       } else {
+        // Show login screen and WAIT — data loads inside doLogin() after sign-in succeeds.
+        finishLoading();
         showLoginScreen();
       }
     }
   } else {
-    // Firebase Auth unavailable entirely — fall back to PIN only, unchanged behaviour
+    // Firebase Auth unavailable entirely (older client, or SDK didn't load) —
+    // fall back to loading data directly, unchanged from original behaviour.
     hideLoginScreen();
+    setLoadProgress(60, 'Loading your data…');
+    await loadDataAfterAuth();
     initPin();
+    finishLoading();
   }
 }
 
@@ -3596,9 +3643,20 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // Init — called by dynamic script loader after Firebase SDK loads
 async function appInit() {
   setLoadProgress(5, 'Starting up…');
-  await initFirebase();
-  initAuth();
-  gateAppEntry();
+  const connected = initFirebaseApp();
+  if (!connected) {
+    setLoadProgress(100, _fbConfigMissing ? 'Setup required' : 'Connection failed');
+    loadLocalFallback();
+    if (_fbConfigMissing) { setTimeout(() => { finishLoading(); showSetupScreen(); }, 400); }
+    else { setTimeout(finishLoading, 600); }
+    navigate('dashboard');
+    updateBackupStatus();
+    checkBackupReminder();
+    return;
+  }
+  setLoadProgress(15, 'Checking sign-in status…');
+  await initAuth();
+  await gateAppEntry(); // loads data internally only after confirming auth state
   navigate('dashboard');
   updateBackupStatus();
   checkBackupReminder();
