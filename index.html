@@ -2167,6 +2167,9 @@ function afterRender(page) {
   if (page === 'members' || page === 'contributions' || page === 'loans') {
     populateMemberDropdowns();
   }
+  if (page === 'settings') {
+    updateAuthUI(); // ensure badge reflects live auth state, not just the initial load moment
+  }
 }
 
 function populateMemberDropdowns() {
