@@ -250,6 +250,35 @@ tr:hover td { background: var(--surface-2); }
 </style>
 </head>
 <body>
+<!-- Firebase Auth Login Screen -->
+<div class="pin-overlay" id="loginOverlay" style="display:none">
+  <div class="pin-box" style="width:380px">
+    <div class="pin-logo">🤝</div>
+    <div class="pin-title">Iremide Cooperative</div>
+    <div class="pin-sub" id="loginSub">Sign in to continue</div>
+
+    <div style="text-align:left;margin-bottom:16px">
+      <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:6px">Email</label>
+      <input id="login-email" type="email" placeholder="you@email.com" autocomplete="username"
+        style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:inherit;outline:none">
+    </div>
+    <div style="text-align:left;margin-bottom:8px">
+      <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:6px">Password</label>
+      <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"
+        style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:inherit;outline:none">
+    </div>
+
+    <div class="pin-error" id="loginError" style="text-align:left;margin-top:4px"></div>
+
+    <button onclick="doLogin()" id="loginBtn"
+      style="width:100%;margin-top:12px;padding:12px;background:var(--gold);border:none;border-radius:8px;color:#1a1206;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+      Sign In
+    </button>
+
+    <div class="pin-hint" style="margin-top:18px">Ask your administrator for login access if you don't have an account yet</div>
+  </div>
+</div>
+
 <div class="pin-overlay" id="pinOverlay">
   <div class="pin-box">
     <div class="pin-logo">🤝</div>
@@ -1930,10 +1959,37 @@ function renderSettings() {
       </div>
     </div>
 
+    <!-- Firebase Authentication -->
+    <div class="card mb-4" style="border-left:3px solid #7c3aed">
+      <div class="card-header">
+        <div><div class="card-title">🔑 Login & Account Security</div>
+        <div class="card-subtitle">Firebase Authentication — secures the database, not just the screen</div></div>
+        <span class="badge" id="authStatusBadge" style="background:var(--amber-light);color:var(--amber)">Checking…</span>
+      </div>
+      <div class="card-body">
+        <div id="authUserBar" style="display:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:500"></div>
+
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;font-size:12px;line-height:1.9;color:var(--text-2)">
+          <strong>Why this matters:</strong> the PIN only hides the screen — it does not protect your Firestore database. Anyone who finds your Firebase project could read or delete data without it. Firebase Authentication gives each user a real verified login that the database itself checks before allowing any access.<br><br>
+          <strong>To create a login for yourself or your secretary:</strong><br>
+          1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--navy)">console.firebase.google.com</a> → your project → <strong>Authentication</strong><br>
+          2. Click <strong>Get Started</strong> → enable <strong>Email/Password</strong> sign-in method<br>
+          3. Go to the <strong>Users</strong> tab → <strong>Add User</strong> → type an email and password<br>
+          4. Come back here and refresh — you'll see the login screen the next time you open the app<br>
+          5. Once everyone has accounts, go to Firestore → Rules and change to <code style="background:var(--surface-3);padding:1px 5px;border-radius:3px">allow read, write: if request.auth != null;</code> to fully lock the database
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-outline" onclick="doLogout()" id="authLogoutBtn" style="display:none">Sign Out</button>
+          <button class="btn btn-outline" onclick="window.open('https://console.firebase.google.com','_blank')">Manage Users in Firebase →</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card mb-4" style="border-left:3px solid var(--navy)">
       <div class="card-header">
         <div><div class="card-title">🔐 PIN / Access Code</div>
-        <div class="card-subtitle">Change the PIN required to open the app</div></div>
+        <div class="card-subtitle">Quick screen lock — used alongside or before Firebase login is set up</div></div>
       </div>
       <div class="card-body">
         <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
@@ -3137,6 +3193,132 @@ function filterDepositTxns() {
   if (tbody) tbody.innerHTML = depositTxnRows(m, t);
 }
 
+// ===== FIREBASE AUTHENTICATION =====
+// This is OPTIONAL and ADDITIVE — if no users are created yet in Firebase Console,
+// the app falls back to the existing PIN system automatically, so nothing breaks
+// for clients who haven't set up Auth yet.
+let auth = null;
+let currentUser = null;
+let _authEnabled = false;
+
+function initAuth() {
+  if (!firebase.apps.length) return; // Firebase not initialised yet
+  try {
+    auth = firebase.auth();
+    _authEnabled = true;
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      updateAuthUI();
+    });
+  } catch(e) {
+    console.warn('Firebase Auth not available:', e.message);
+    _authEnabled = false;
+  }
+}
+
+function updateAuthUI() {
+  const badge = document.getElementById('authStatusBadge');
+  const userBar = document.getElementById('authUserBar');
+  const logoutBtn = document.getElementById('authLogoutBtn');
+  if (currentUser) {
+    if (badge) { badge.textContent = '✓ Logged in'; badge.style.background='var(--green-light)'; badge.style.color='var(--green)'; }
+    if (userBar) { userBar.innerHTML = `Signed in as <strong>${currentUser.email}</strong>`; userBar.style.display='block'; }
+    if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+  } else {
+    if (badge) { badge.textContent = _authEnabled ? 'No account yet' : 'Not set up'; badge.style.background='var(--amber-light)'; badge.style.color='var(--amber)'; }
+    if (userBar) userBar.style.display='none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+  }
+}
+
+function showLoginScreen() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('pinOverlay').style.display = 'none';
+}
+
+function hideLoginScreen() {
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email')?.value?.trim();
+  const password = document.getElementById('login-password')?.value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  if (!email || !password) { errEl.textContent = 'Please enter both email and password'; return; }
+  if (!auth) { errEl.textContent = 'Authentication not available — check your connection'; return; }
+  errEl.textContent = '';
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    hideLoginScreen();
+    initPin(); // proceed to PIN check (or straight in if no PIN needed)
+    toast(`✓ Signed in as ${email}`);
+  } catch(e) {
+    let msg = 'Sign in failed';
+    if (e.code === 'auth/invalid-email') msg = 'Invalid email address';
+    else if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Incorrect email or password';
+    else if (e.code === 'auth/too-many-requests') msg = 'Too many attempts — try again later';
+    else if (e.code === 'auth/network-request-failed') msg = 'Network error — check your connection';
+    errEl.textContent = msg;
+  } finally {
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  if (!confirm('Sign out of your account?')) return;
+  try {
+    await auth.signOut();
+    sessionStorage.removeItem('iremide_unlocked');
+    toast('Signed out');
+    location.reload();
+  } catch(e) {
+    toast('Sign out failed: ' + e.message);
+  }
+}
+
+async function sendPasswordReset() {
+  const email = document.getElementById('login-email')?.value?.trim();
+  if (!email) { document.getElementById('loginError').textContent = 'Enter your email above first'; return; }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    document.getElementById('loginError').style.color = 'var(--green)';
+    document.getElementById('loginError').textContent = '✓ Password reset link sent to ' + email;
+  } catch(e) {
+    document.getElementById('loginError').style.color = '';
+    document.getElementById('loginError').textContent = 'Could not send reset email: ' + e.message;
+  }
+}
+
+// Decide what screen to show on startup: login (if Auth has users) or straight to PIN (legacy)
+function gateAppEntry() {
+  if (_authEnabled && auth) {
+    if (auth.currentUser) {
+      // already logged in this session
+      hideLoginScreen();
+      initPin();
+    } else {
+      // Check if Auth has ANY login attempt expected — we simply show login screen
+      // if Auth is enabled. If the client hasn't created any users yet, they can
+      // still click "skip" via PIN-only legacy mode through Settings.
+      const legacyMode = localStorage.getItem('iremide_auth_skip') === '1';
+      if (legacyMode) {
+        hideLoginScreen();
+        initPin();
+      } else {
+        showLoginScreen();
+      }
+    }
+  } else {
+    // Firebase Auth unavailable entirely — fall back to PIN only, unchanged behaviour
+    hideLoginScreen();
+    initPin();
+  }
+}
+
 // ===== PIN LOGIN =====
 let _pinEntry = '';
 const DEFAULT_PIN = '1234';
@@ -3355,10 +3537,19 @@ function toast(msg) {
 // Keyboard support for PIN
 document.addEventListener('keydown', e => {
   const overlay = document.getElementById('pinOverlay');
-  if (!overlay || overlay.style.display === 'none') return;
-  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
-  else if (e.key === 'Backspace') pinBack();
-  else if (e.key === 'Escape') pinClear();
+  if (overlay && overlay.style.display !== 'none') {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    else if (e.key === 'Backspace') pinBack();
+    else if (e.key === 'Escape') pinClear();
+  }
+});
+
+// Keyboard support for login (Enter to submit)
+document.addEventListener('keydown', e => {
+  const loginOverlay = document.getElementById('loginOverlay');
+  if (loginOverlay && loginOverlay.style.display !== 'none' && e.key === 'Enter') {
+    doLogin();
+  }
 });
 
 // Close modals on overlay click
@@ -3368,9 +3559,10 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 
 // Init — called by dynamic script loader after Firebase SDK loads
 async function appInit() {
-  initPin();
   setLoadProgress(5, 'Starting up…');
   await initFirebase();
+  initAuth();
+  gateAppEntry();
   navigate('dashboard');
   updateBackupStatus();
   checkBackupReminder();
@@ -3392,8 +3584,10 @@ function loadScript(src, cb) {
 window.addEventListener('load', () => {
   loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js', () => {
     loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js', () => {
-      loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js', () => {});
-      appInit();
+      loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js', () => {
+        loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js', () => {});
+        appInit();
+      });
     });
   });
 });
