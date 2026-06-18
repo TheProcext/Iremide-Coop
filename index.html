@@ -538,14 +538,14 @@ tr:hover td { background: var(--surface-2); }
         <div class="form-group"><label>Cluster</label><input id="c-cluster" readonly style="background:var(--surface-3)"></div>
         <div class="form-group" style="grid-column:1/-1">
           <label>Total Amount Paid (₦) *</label>
-          <input id="c-amount" type="number" placeholder="e.g. 2000" oninput="calcSplit()" style="font-size:16px;font-weight:600">
+          <input id="c-amount" type="number" placeholder="e.g. 2000" style="font-size:16px;font-weight:600">
         </div>
       </div>
-      <div class="split-preview" id="splitPreview">
-        <div class="split-item"><div class="split-item-label">Building</div><div class="split-item-val" id="sp-building">₦0</div></div>
-        <div class="split-item"><div class="split-item-label">Shares</div><div class="split-item-val" id="sp-shares">₦0</div></div>
-        <div class="split-item"><div class="split-item-label">Savings</div><div class="split-item-val" id="sp-savings">₦0</div></div>
-        <div class="split-item"><div class="split-item-label">Dev Levy</div><div class="split-item-val" id="sp-levy">₦0</div></div>
+      <div class="form-grid" style="margin-top:4px">
+        <div class="form-group"><label>Building (₦)</label><input id="c-building" type="number" placeholder="0"></div>
+        <div class="form-group"><label>Shares (₦)</label><input id="c-shares" type="number" placeholder="0"></div>
+        <div class="form-group"><label>Savings (₦)</label><input id="c-savings" type="number" placeholder="0"></div>
+        <div class="form-group"><label>Dev Levy (₦)</label><input id="c-levy" type="number" placeholder="0"></div>
       </div>
       <div class="form-group mb-3"><label>Remarks</label><input id="c-remarks" placeholder="Optional note"></div>
       <div class="form-actions">
@@ -1211,7 +1211,7 @@ const pages = {
   'cluster-summary': { title:'Cluster Summary', subtitle:'Totals and performance per cluster' },
   ledger: { title:'Member Ledger', subtitle:'Full account view for any member' },
   email: { title:'Email Members', subtitle:'Send statements, receipts and announcements' },
-  settings: { title:'Settings', subtitle:'Split ratios and system configuration' }
+  settings: { title:'Settings', subtitle:'System configuration, login, and communication setup' }
 };
 
 function navigate(page) {
@@ -1778,11 +1778,11 @@ function renderClusterMeeting() {
               <td class="td-num">${fmt(f.shares)}</td>
               <td class="td-num">${fmt(f.savings)}</td>
               <td class="td-num ${f.loan>0?'text-red':''}">${fmt(f.loan)}</td>
-              <td><input class="meeting-row-input" data-card="${m.card}" data-field="amount" type="number" placeholder="0" oninput="autoSplit(this,${i})"></td>
-              <td><input class="meeting-row-input" id="mr-bld-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
-              <td><input class="meeting-row-input" id="mr-shr-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
-              <td><input class="meeting-row-input" id="mr-sav-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
-              <td><input class="meeting-row-input" id="mr-lev-${i}" type="number" placeholder="0" readonly style="background:var(--surface-3)"></td>
+              <td><input class="meeting-row-input" data-card="${m.card}" data-field="amount" type="number" placeholder="0"></td>
+              <td><input class="meeting-row-input" id="mr-bld-${i}" data-card="${m.card}" data-field="building" type="number" placeholder="0"></td>
+              <td><input class="meeting-row-input" id="mr-shr-${i}" data-card="${m.card}" data-field="shares" type="number" placeholder="0"></td>
+              <td><input class="meeting-row-input" id="mr-sav-${i}" data-card="${m.card}" data-field="savings" type="number" placeholder="0"></td>
+              <td><input class="meeting-row-input" id="mr-lev-${i}" data-card="${m.card}" data-field="levy" type="number" placeholder="0"></td>
               <td><input class="meeting-row-input" data-card="${m.card}" data-field="loanrep" type="number" placeholder="0"></td>
               <td><input class="meeting-row-input" data-card="${m.card}" data-field="remarks" type="text" placeholder="Note" style="background:var(--surface-2)"></td>
             </tr>`;
@@ -2119,35 +2119,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <!-- Split Ratios -->
-    <div class="card mb-4">
-      <div class="card-header"><div class="card-title">Contribution Split Ratios</div>
-      <div class="card-subtitle">Applied automatically when a contribution amount is entered</div></div>
-      <div class="card-body">
-        <div class="form-grid" style="grid-template-columns:1fr 1fr">
-          <div class="form-group"><label>Building Fund %</label>
-            <input type="number" id="s-building" value="${(data.settings.building*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
-          <div class="form-group"><label>Shares %</label>
-            <input type="number" id="s-shares" value="${(data.settings.shares*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
-          <div class="form-group"><label>Savings %</label>
-            <input type="number" id="s-savings" value="${(data.settings.savings*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
-          <div class="form-group"><label>Development Levy %</label>
-            <input type="number" id="s-levy" value="${(data.settings.levy*100).toFixed(1)}" step="0.5" oninput="previewSplit()"></div>
-        </div>
-        <div id="splitCheck" style="margin-top:10px;padding:10px;border-radius:var(--radius-sm);background:var(--green-light);color:var(--green);font-size:13px">
-          ✓ Total: 100% — amounts are balanced
-        </div>
-        <div class="form-group mt-3" style="margin-top:12px"><label>Standard contribution amount for preview (₦)</label>
-          <input type="number" id="s-std" value="2000" oninput="previewSplit()"></div>
-        <div class="split-preview" id="settingsSplitPreview" style="margin-top:10px">
-          <div class="split-item"><div class="split-item-label">Building</div><div class="split-item-val" id="ss-bld">₦100</div></div>
-          <div class="split-item"><div class="split-item-label">Shares</div><div class="split-item-val" id="ss-shr">₦1,000</div></div>
-          <div class="split-item"><div class="split-item-label">Savings</div><div class="split-item-val" id="ss-sav">₦800</div></div>
-          <div class="split-item"><div class="split-item-label">Dev Levy</div><div class="split-item-val" id="ss-lev">₦100</div></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
-      </div>
-    </div>
+    <!-- Split Ratios card removed — contributions are now entered manually per item (Building, Shares, Savings, Dev Levy), no settings-driven percentage split -->
 
     <div class="card">
       <div class="card-header"><div class="card-title">Cluster List</div></div>
@@ -2267,7 +2239,7 @@ function openAddContrib() {
   document.getElementById('c-cluster').value = '';
   document.getElementById('c-amount').value = '';
   document.getElementById('c-remarks').value = '';
-  ['sp-building','sp-shares','sp-savings','sp-levy'].forEach(id=>document.getElementById(id).textContent='₦0');
+  ['c-building','c-shares','c-savings','c-levy'].forEach(id=>document.getElementById(id).value='');
   openModal('addContribModal');
 }
 
@@ -2276,17 +2248,9 @@ function fillContribMember() {
   const m = memberByCard(card);
   document.getElementById('c-name').value = m ? m.name : '';
   document.getElementById('c-cluster').value = m ? m.cluster : '';
-  calcSplit();
 }
 
-function calcSplit() {
-  const amt = +document.getElementById('c-amount').value || 0;
-  const s = data.settings;
-  document.getElementById('sp-building').textContent = fmt(amt * s.building);
-  document.getElementById('sp-shares').textContent = fmt(amt * s.shares);
-  document.getElementById('sp-savings').textContent = fmt(amt * s.savings);
-  document.getElementById('sp-levy').textContent = fmt(amt * s.levy);
-}
+// calcSplit removed — Building, Shares, Savings, and Dev Levy are now entered manually, not auto-calculated
 
 async function saveContribution() {
   const card = document.getElementById('c-card').value;
@@ -2294,12 +2258,14 @@ async function saveContribution() {
   const date = document.getElementById('c-date').value;
   if (!card || !amount || !date) { toast('Please fill in date, member, and amount'); return; }
   const m = memberByCard(card);
-  const s = data.settings;
   const contrib = {
     id: null,
     date, card, memberName: m.name, cluster: m.cluster,
-    amount, building: amount*s.building, shares: amount*s.shares,
-    savings: amount*s.savings, levy: amount*s.levy,
+    amount,
+    building: +document.getElementById('c-building').value || 0,
+    shares: +document.getElementById('c-shares').value || 0,
+    savings: +document.getElementById('c-savings').value || 0,
+    levy: +document.getElementById('c-levy').value || 0,
     remarks: document.getElementById('c-remarks').value,
     voided: false
   };
@@ -2385,36 +2351,32 @@ function selectMeetingCluster(cl) {
   render('cluster-meeting');
 }
 
-function autoSplit(input, idx) {
-  const amt = +input.value || 0;
-  const s = data.settings;
-  const bld = document.getElementById(`mr-bld-${idx}`);
-  const shr = document.getElementById(`mr-shr-${idx}`);
-  const sav = document.getElementById(`mr-sav-${idx}`);
-  const lev = document.getElementById(`mr-lev-${idx}`);
-  if (bld) bld.value = (amt * s.building).toFixed(2);
-  if (shr) shr.value = (amt * s.shares).toFixed(2);
-  if (sav) sav.value = (amt * s.savings).toFixed(2);
-  if (lev) lev.value = (amt * s.levy).toFixed(2);
-}
+// autoSplit removed — secretary now enters Building, Shares, Savings, and Dev Levy manually for each contribution
 
 async function saveMeetingContribs() {
   const date = document.getElementById('meetingDate').value;
   const cl = window._meetingCluster || CLUSTERS[0];
   const members = data.members.filter(m => m.cluster === cl);
-  const s = data.settings;
   let saved = 0;
   const contribs = [], loans = [];
   members.forEach((m) => {
     const amtEl = document.querySelector(`[data-card="${m.card}"][data-field="amount"]`);
+    const bldEl = document.querySelector(`[data-card="${m.card}"][data-field="building"]`);
+    const shrEl = document.querySelector(`[data-card="${m.card}"][data-field="shares"]`);
+    const savEl = document.querySelector(`[data-card="${m.card}"][data-field="savings"]`);
+    const levEl = document.querySelector(`[data-card="${m.card}"][data-field="levy"]`);
     const repEl = document.querySelector(`[data-card="${m.card}"][data-field="loanrep"]`);
     const remEl = document.querySelector(`[data-card="${m.card}"][data-field="remarks"]`);
     const amt = amtEl ? +amtEl.value : 0;
+    const bld = bldEl ? +bldEl.value : 0;
+    const shr = shrEl ? +shrEl.value : 0;
+    const sav = savEl ? +savEl.value : 0;
+    const lev = levEl ? +levEl.value : 0;
     const rep = repEl ? +repEl.value : 0;
     if (amt > 0) {
       const c = { id:null, date, card: m.card, memberName: m.name, cluster: m.cluster,
-        amount: amt, building: amt*s.building, shares: amt*s.shares,
-        savings: amt*s.savings, levy: amt*s.levy,
+        amount: amt, building: bld, shares: shr,
+        savings: sav, levy: lev,
         remarks: remEl ? remEl.value : '', voided: false };
       contribs.push(c);
       data.contributions.unshift(c);
@@ -2459,38 +2421,8 @@ function viewLedger(card) {
 }
 
 // ===== SETTINGS =====
-function previewSplit() {
-  const bld = +document.getElementById('s-building').value/100;
-  const shr = +document.getElementById('s-shares').value/100;
-  const sav = +document.getElementById('s-savings').value/100;
-  const lev = +document.getElementById('s-levy').value/100;
-  const std = +document.getElementById('s-std').value||2000;
-  const total = bld+shr+sav+lev;
-  const chk = document.getElementById('splitCheck');
-  if (Math.abs(total-1) < 0.001) {
-    chk.style.background='var(--green-light)'; chk.style.color='var(--green)';
-    chk.textContent = `✓ Total: ${(total*100).toFixed(1)}% — amounts are balanced`;
-  } else {
-    chk.style.background='var(--red-light)'; chk.style.color='var(--red)';
-    chk.textContent = `⚠ Total: ${(total*100).toFixed(1)}% — must equal 100%`;
-  }
-  document.getElementById('ss-bld').textContent = fmt(std*bld);
-  document.getElementById('ss-shr').textContent = fmt(std*shr);
-  document.getElementById('ss-sav').textContent = fmt(std*sav);
-  document.getElementById('ss-lev').textContent = fmt(std*lev);
-}
-
-async function saveSettings() {
-  const bld = +document.getElementById('s-building').value/100;
-  const shr = +document.getElementById('s-shares').value/100;
-  const sav = +document.getElementById('s-savings').value/100;
-  const lev = +document.getElementById('s-levy').value/100;
-  if (Math.abs(bld+shr+sav+lev-1) > 0.001) { toast('Percentages must total 100%'); return; }
-  data.settings = { building: bld, shares: shr, savings: sav, levy: lev };
-  await fbSaveSettings();
-  save();
-  toast('Settings saved');
-}
+// previewSplit and saveSettings removed — the Contribution Split Ratios settings card no longer exists;
+// Building, Shares, Savings, and Dev Levy are entered manually on each contribution instead
 
 // ===== GLOBAL SEARCH =====
 function globalSearchFn(val) {
